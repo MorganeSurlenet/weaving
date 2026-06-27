@@ -767,6 +767,69 @@ function saveConfig() {
   loadFichesFromGithub().then(() => renderFichesList());
 }
 
+// ─── CONVERTISSEUR TITRAGE (NeC/NeL → Nm) ──────────────────────────────────
+let _convTarget = null;
+
+function openConvertisseur(target) {
+  _convTarget = target;
+  document.getElementById('conv-val').value = '';
+  document.getElementById('conv-sys').value = 'NeC';
+  document.getElementById('conv-result').innerHTML = '<span style="color:var(--color-text-muted);">Entrez un titrage ci-dessus…</span>';
+  document.getElementById('conv-use-chaine').style.display = target === 'chaine' ? 'inline-flex' : 'none';
+  document.getElementById('conv-use-trame').style.display  = target === 'trame'  ? 'inline-flex' : 'none';
+  document.getElementById('modal-convertisseur').classList.add('open');
+  setTimeout(() => document.getElementById('conv-val').focus(), 100);
+}
+
+function closeConvertisseur() {
+  document.getElementById('modal-convertisseur').classList.remove('open');
+  _convTarget = null;
+}
+
+function calcConvertisseur() {
+  const raw = document.getElementById('conv-val').value.trim();
+  const sys = document.getElementById('conv-sys').value;
+  const v   = parseTitrageVal(raw);
+  const resEl = document.getElementById('conv-result');
+
+  if (v === null || v <= 0) {
+    resEl.innerHTML = '<span style="color:var(--color-text-muted);">Entrez un titrage ci-dessus…</span>';
+    document.getElementById('conv-use-chaine').style.display = 'none';
+    document.getElementById('conv-use-trame').style.display  = 'none';
+    return;
+  }
+
+  const facteur = sys === 'NeC' ? 1.6936 : 1.5;
+  const nm = v * facteur;
+  const label = sys === 'NeC' ? 'NeC (coton)' : 'NeL (lin/cotolin)';
+
+  resEl.innerHTML = `
+    <div style="margin-bottom:0.3rem; color:var(--color-text-muted); font-size:0.8rem;">${raw} ${label}</div>
+    <div style="font-size:1.05rem;"><strong>${nm.toFixed(2)} Nm</strong></div>
+    <div style="font-size:0.75rem; color:var(--color-text-muted); margin-top:0.2rem;">soit ${Math.round(nm * 1000).toLocaleString('fr-FR')} m/kg</div>
+  `;
+
+  document.getElementById('conv-use-chaine').style.display = _convTarget === 'chaine' ? 'inline-flex' : 'none';
+  document.getElementById('conv-use-trame').style.display  = _convTarget === 'trame'  ? 'inline-flex' : 'none';
+}
+
+function useConvertisseur(target) {
+  const raw = document.getElementById('conv-val').value.trim();
+  const sys = document.getElementById('conv-sys').value;
+  const v   = parseTitrageVal(raw);
+  if (v === null || v <= 0) return;
+  const facteur = sys === 'NeC' ? 1.6936 : 1.5;
+  const nm = v * facteur;
+  const nmStr = Number.isInteger(nm) ? String(nm) : nm.toFixed(2);
+  const valEl = document.getElementById(`f-titrage-${target}-val`);
+  if (valEl) {
+    valEl.value = nmStr;
+    convertTitrage(target);
+  }
+  closeConvertisseur();
+  showToast(`Titrage ${nmStr} Nm appliqué au fil de ${target === 'chaine' ? 'chaîne' : 'trame'}`, 'success');
+}
+
 // ─── INITIALISATION ─────────────────────────────────────────
 async function init() {
   loadGithubConfig();
