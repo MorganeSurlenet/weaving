@@ -643,8 +643,15 @@ textarea { resize: vertical; min-height: 80px; }
                              │(duites×péd.) │
                              └──────────────┘
 ──────────────────────────────────────────────────────────────────────────── */
-.draft-container {
+/* Wrapper scrollable sur mobile */
+.draft-scroll-wrapper {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  padding-bottom: 0.5rem;
+}
+
+.draft-container {
   padding: 0.5rem 0;
   /* Grille 2 colonnes : enlaçage (auto) | colonne droite (auto) */
   display: inline-grid;
@@ -652,6 +659,7 @@ textarea { resize: vertical; min-height: 80px; }
   grid-template-rows: auto auto;
   gap: 8px;
   align-items: start;
+  min-width: min-content; /* empêche la compression sur mobile */
 }
 
 /* Enlaçage : colonne 1, lignes 1-2 */
