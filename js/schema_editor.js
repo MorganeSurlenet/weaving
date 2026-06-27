@@ -195,18 +195,25 @@ const SchemaEditor = {
     };
 
     container.innerHTML = '';
-    container.className = 'draft-readonly-wrapper';
+    container.className = 'draft-container draft-readonly-wrapper';
 
-    const top = document.createElement('div');
-    top.className = 'draft-top';
-    makeReadOnlyGrid(top, 'Enlaçage',  d.enlacement, d.rows,   d.cols);
-    makeReadOnlyGrid(top, 'Attachage', d.attachage,  d.shafts, d.treadles);
-    container.appendChild(top);
+    // Enlaçage : colonne 1, lignes 1-2
+    const zoneEnl = document.createElement('div');
+    zoneEnl.className = 'draft-zone-enlacement';
+    makeReadOnlyGrid(zoneEnl, 'Enlaçage', d.enlacement, d.rows, d.cols);
+    container.appendChild(zoneEnl);
 
-    const bot = document.createElement('div');
-    bot.className = 'draft-bottom';
-    makeReadOnlyGrid(bot, 'Pédalage', d.pedalage, d.rows, d.treadles);
-    container.appendChild(bot);
+    // Attachage : colonne 2, ligne 1
+    const zoneAtt = document.createElement('div');
+    zoneAtt.className = 'draft-zone-attachage';
+    makeReadOnlyGrid(zoneAtt, 'Attachage', d.attachage, d.shafts, d.treadles);
+    container.appendChild(zoneAtt);
+
+    // Pédalage : colonne 2, ligne 2
+    const zonePed = document.createElement('div');
+    zonePed.className = 'draft-zone-pedalage';
+    makeReadOnlyGrid(zonePed, 'Pédalage', d.pedalage, d.rows, d.treadles);
+    container.appendChild(zonePed);
   }
 };
 
