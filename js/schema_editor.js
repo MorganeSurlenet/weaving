@@ -119,20 +119,34 @@ const SchemaEditor = {
   _toggle(gridName, r, c, value) {
     const data = this[gridName];
     if (!data?.[r]) return;
+
+    // Règles d'exclusivité :
+    // Enlaçage : une seule case noire PAR COLONNE (chaque fil = 1 cadre)
+    // Pédalage : une seule case noire PAR LIGNE (chaque duite = 1 pédale)
+    if (value) {
+      if (gridName === 'enlacement') {
+        // Effacer toute la colonne c
+        for (let row = 0; row < this.shafts; row++) {
+          data[row][c] = false;
+        }
+      } else if (gridName === 'pedalage') {
+        // Effacer toute la ligne r
+        for (let col = 0; col < this.treadles; col++) {
+          data[r][col] = false;
+        }
+      }
+    }
+
     data[r][c] = value;
-    // Mettre à jour visuellement la cellule sans re-render complet
-    const container = document.getElementById(
-      gridName === 'enlacement' ? 'grid-enlacement' :
-      gridName === 'attachage'  ? 'grid-attachage'  : 'grid-pedalage'
-    );
-    if (!container) return;
-    const cells = container.querySelectorAll('.schema-cell');
+
+    // Re-render complet de la grille concernée pour reflet les effacements
+    const containerId = gridName === 'enlacement' ? 'grid-enlacement' :
+                        gridName === 'attachage'  ? 'grid-attachage'  : 'grid-pedalage';
+    const rows = gridName === 'enlacement' ? this.shafts :
+                 gridName === 'attachage'  ? this.shafts : this.rows;
     const cols = gridName === 'enlacement' ? this.cols :
                  gridName === 'attachage'  ? this.treadles : this.treadles;
-    const idx = r * cols + c;
-    if (cells[idx]) {
-      cells[idx].classList.toggle('filled', value);
-    }
+    this._renderGrid(containerId, data, rows, cols, gridName);
     this.saveToHiddenField();
   },
 
