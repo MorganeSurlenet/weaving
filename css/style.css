@@ -594,6 +594,131 @@ textarea { resize: vertical; min-height: 80px; }
   max-width: 320px;
 }
 
+/* ===== ÉDITEUR DE SCHÉMA ===== */
+.schema-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: var(--color-accent-bg);
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border-light);
+}
+
+.schema-size-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.schema-size-controls label {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.schema-size-controls input[type="number"] {
+  padding: 0.2rem 0.3rem;
+  font-size: 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+/* Conteneur principal du draft */
+.draft-container {
+  overflow-x: auto;
+  padding: 0.5rem 0;
+}
+
+.draft-top {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.draft-bottom {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.draft-spacer {
+  flex: 1;
+}
+
+.draft-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.draft-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0 2px;
+}
+
+/* Cellules de la grille */
+.schema-cell {
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 1px;
+  transition: background 0.05s;
+  cursor: crosshair;
+}
+
+.schema-cell.filled {
+  background: var(--color-text);
+  border-color: var(--color-text);
+}
+
+.schema-cell:hover {
+  background: var(--color-accent-light);
+  opacity: 0.8;
+}
+
+.schema-cell.filled:hover {
+  background: var(--color-accent);
+}
+
+/* Vue lecture seule */
+.draft-readonly-wrapper {
+  overflow-x: auto;
+}
+
+.draft-zone-readonly {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.schema-cell-ro {
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 1px;
+}
+
+.schema-cell-ro.filled {
+  background: #2c2a27;
+  border-color: #2c2a27;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 640px) {
   header { padding: 0 1rem; }
