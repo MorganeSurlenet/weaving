@@ -2,8 +2,8 @@
 
 const SchemaEditor = {
   // Données des 3 grilles : tableaux 2D de booléens
-  enlacement: [],  // [row][col] — rows=duites, cols=fils
-  attachage:  [],  // [row][col] — rows=cadres (haut=cadre 1), cols=pédales
+  enlacement: [],  // [row][col] — rows=cadres, cols=fils
+  attachage:  [],  // [row][col] — rows=cadres, cols=pédales
   pedalage:   [],  // [row][col] — rows=duites, cols=pédales
 
   // Dimensions courantes
@@ -40,14 +40,20 @@ const SchemaEditor = {
       }
       return g;
     };
-    this.enlacement = makeGrid(this.rows,   this.cols,     keepExisting ? this.enlacement : null);
+    // Enlaçage : cadres (lignes) × fils (colonnes)
+    this.enlacement = makeGrid(this.shafts, this.cols,     keepExisting ? this.enlacement : null);
+    // Attachage : cadres (lignes) × pédales (colonnes)
     this.attachage  = makeGrid(this.shafts, this.treadles, keepExisting ? this.attachage  : null);
+    // Pédalage : duites (lignes) × pédales (colonnes)
     this.pedalage   = makeGrid(this.rows,   this.treadles, keepExisting ? this.pedalage   : null);
   },
 
   render() {
-    this._renderGrid('grid-enlacement', this.enlacement, this.rows,   this.cols,     'enlacement');
+    // Enlaçage : cadres × fils
+    this._renderGrid('grid-enlacement', this.enlacement, this.shafts, this.cols,     'enlacement');
+    // Attachage : cadres × pédales
     this._renderGrid('grid-attachage',  this.attachage,  this.shafts, this.treadles, 'attachage');
+    // Pédalage : duites × pédales
     this._renderGrid('grid-pedalage',   this.pedalage,   this.rows,   this.treadles, 'pedalage');
   },
 
@@ -200,7 +206,8 @@ const SchemaEditor = {
     // Enlaçage : colonne 1, lignes 1-2
     const zoneEnl = document.createElement('div');
     zoneEnl.className = 'draft-zone-enlacement';
-    makeReadOnlyGrid(zoneEnl, 'Enlaçage', d.enlacement, d.rows, d.cols);
+    // Enlaçage : cadres × fils
+    makeReadOnlyGrid(zoneEnl, 'Enlaçage', d.enlacement, d.shafts, d.cols);
     container.appendChild(zoneEnl);
 
     // Attachage : colonne 2, ligne 1
