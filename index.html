@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fiches Techniques de Tissage</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     EN-TÊTE
+═══════════════════════════════════════════════════════════ -->
+<header>
+  <h1>
+    Fiches de Tissage
+    <span>selon le modèle Betty Briand</span>
+  </h1>
+  <div class="header-actions">
+    <button id="config-status" class="config-status" onclick="openConfigModal()" title="Configurer la connexion GitHub">
+      <span class="dot"></span>
+      <span class="label">Configurer GitHub</span>
+    </button>
+  </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════
+     NAVIGATION
+═══════════════════════════════════════════════════════════ -->
+<nav>
+  <a href="#" data-view="view-list" class="active">Mes fiches</a>
+  <a href="#" data-view="view-form">+ Nouvelle fiche</a>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════
+     CONTENU PRINCIPAL
+═══════════════════════════════════════════════════════════ -->
+<main>
+
+  <!-- ── VUE LISTE ── -->
+  <div id="view-list" class="view active">
+    <div class="page-header">
+      <h2>Mes fiches techniques</h2>
+      <button class="btn btn-primary" onclick="openNewFiche()">+ Nouvelle fiche</button>
+    </div>
+    <div class="search-bar">
+      <input type="text" id="search-input" placeholder="Rechercher par projet, armure, fil…">
+    </div>
+    <div id="fiches-grid" class="fiches-grid">
+      <!-- Cartes générées par JS -->
+    </div>
+  </div>
+
+  <!-- ── VUE DÉTAIL ── -->
+  <div id="view-detail" class="view">
+    <div class="page-header">
+      <h2 id="detail-title">Fiche technique</h2>
+      <div style="display:flex; gap:0.5rem;">
+        <button class="btn" id="btn-print-detail">Imprimer</button>
+        <button class="btn btn-primary" id="btn-edit-detail">Modifier</button>
+        <button class="btn" onclick="showView('view-list'); renderFichesList();">← Retour</button>
+      </div>
+    </div>
+    <div class="fiche-detail" id="detail-content">
+      <!-- Généré par JS -->
+    </div>
+  </div>
+
+  <!-- ── VUE FORMULAIRE ── -->
+  <div id="view-form" class="view">
+    <div class="page-header">
+      <h2 id="form-title">Nouvelle fiche</h2>
+      <div style="display:flex; gap:0.5rem;">
+        <button class="btn" onclick="showView('view-list'); renderFichesList();">Annuler</button>
+        <button class="btn btn-primary" onclick="saveFiche()">Enregistrer</button>
+      </div>
+    </div>
+
+    <form id="fiche-form" onsubmit="return false;">
+      <div class="form-container">
+
+        <!-- ── SECTION 1 : Informations générales ── -->
+        <div class="form-section">
+          <div class="form-section-title">Informations générales</div>
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label for="f-projet">Projet du tissu *</label>
+              <input type="text" id="f-projet" name="projet" placeholder="Ex : Écharpe en lin naturel">
+            </div>
+            <div class="form-group full-width">
+              <label for="f-source">Ma source d'inspiration</label>
+              <input type="text" id="f-source" name="source_inspiration" placeholder="Ex : Livre, motif traditionnel…">
+            </div>
+            <div class="form-group full-width">
+              <label for="f-mesures">Mesures finales du tissu</label>
+              <input type="text" id="f-mesures" name="mesures_finales" placeholder="Ex : 30 cm × 180 cm">
+            </div>
+            <div class="form-group">
+              <label for="f-fil-chaine">Fil de chaîne utilisé</label>
+              <input type="text" id="f-fil-chaine" name="fil_chaine" placeholder="Ex : Lin 16/2">
+            </div>
+            <div class="form-group">
+              <label for="f-titrage-chaine">Titrage fil de chaîne</label>
+              <div class="input-with-unit">
+                <input type="number" id="f-titrage-chaine" name="titrage_chaine" placeholder="Ex : 3200" min="0">
+                <span class="unit">m/kg</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="f-fil-trame">Fil de trame utilisé</label>
+              <input type="text" id="f-fil-trame" name="fil_trame" placeholder="Ex : Coton 8/2">
+            </div>
+            <div class="form-group">
+              <label for="f-titrage-trame">Titrage fil de trame</label>
+              <div class="input-with-unit">
+                <input type="number" id="f-titrage-trame" name="titrage_trame" placeholder="Ex : 1600" min="0">
+                <span class="unit">m/kg</span>
+              </div>
+            </div>
+            <div class="form-group full-width">
+              <label for="f-armure">Armure</label>
+              <input type="text" id="f-armure" name="armure" placeholder="Ex : Toile, sergé 2/2, satin 5…">
+            </div>
+            <div class="form-group">
+              <label for="f-densite-chaine">Densité de la chaîne</label>
+              <div class="input-with-unit">
+                <input type="number" id="f-densite-chaine" name="densite_chaine" placeholder="Ex : 12" min="0" step="0.5">
+                <span class="unit">fils/cm</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="f-densite-trame">Densité de la trame</label>
+              <div class="input-with-unit">
+                <input type="number" id="f-densite-trame" name="densite_trame" placeholder="Ex : 10" min="0" step="0.5">
+                <span class="unit">fils/cm</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="f-peigne">Peigne</label>
+              <div class="input-with-unit">
+                <input type="number" id="f-peigne" name="peigne_dents" placeholder="Ex : 6" min="0" step="0.5">
+                <span class="unit">dents/cm</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="f-fils-dent">Fils par dent</label>
+              <input type="number" id="f-fils-dent" name="fils_par_dent" placeholder="Ex : 2" min="1">
+            </div>
+          </div>
+        </div>
+
+        <!-- ── SECTION 2 : Calcul de la chaîne ── -->
+        <div class="form-section">
+          <div class="form-section-title">Calcul de la chaîne</div>
+
+          <p style="font-size:0.8rem; color:var(--color-text-muted); margin-bottom:1rem; text-align:center;">
+            Les résultats sont calculés automatiquement à partir de vos saisies.
+          </p>
+
+          <!-- Largeur -->
+          <div style="margin-bottom:1.5rem;">
+            <p style="font-size:0.85rem; font-weight:600; color:var(--color-accent); margin-bottom:0.75rem;">Largeur de la chaîne</p>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Largeur souhaitée du tissu fini</label>
+                <div class="input-with-unit">
+                  <input type="number" name="larg_souhaitee" placeholder="Ex : 30" min="0" step="0.5">
+                  <span class="unit">cm</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>+ ajout dû au traitement</label>
+                <div class="input-with-unit">
+                  <input type="number" name="larg_ajout_traitement_pct" placeholder="Ex : 10" min="0" max="100">
+                  <span class="unit">%</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>= largeur tissu brut tombé du métier</label>
+                <div class="calc-result" id="calc-larg-brut">—</div>
+              </div>
+              <div class="form-group">
+                <label>+ ajout dû au retrait</label>
+                <div class="input-with-unit">
+                  <input type="number" name="larg_ajout_retrait_pct" placeholder="Ex : 5" min="0" max="100">
+                  <span class="unit">%</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label><strong>= largeur de chaîne en peigne</strong></label>
+                <div class="calc-result" id="calc-larg-peigne" style="font-weight:700; color:var(--color-accent);">—</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Longueur -->
+          <div style="margin-bottom:1.5rem;">
+            <p style="font-size:0.85rem; font-weight:600; color:var(--color-accent); margin-bottom:0.75rem;">Longueur de la chaîne</p>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Longueur souhaitée du tissu fini</label>
+                <div class="input-with-unit">
+                  <input type="number" name="long_souhaitee" placeholder="Ex : 180" min="0">
+                  <span class="unit">cm</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>+ ajout dû au traitement</label>
+                <div class="input-with-unit">
+                  <input type="number" name="long_ajout_traitement_pct" placeholder="Ex : 10" min="0" max="100">
+                  <span class="unit">%</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>= longueur tissu tombé du métier</label>
+                <div class="calc-result" id="calc-long-metier">—</div>
+              </div>
+              <div class="form-group">
+                <label>+ ajout dû au retrait</label>
+                <div class="input-with-unit">
+                  <input type="number" name="long_ajout_retrait_pct" placeholder="Ex : 5" min="0" max="100">
+                  <span class="unit">%</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label><strong>= longueur de chaîne tissée par article</strong></label>
+                <div class="calc-result" id="calc-long-chaine-article" style="font-weight:700;">—</div>
+              </div>
+              <div class="form-group">
+                <label>+ franges</label>
+                <div class="input-with-unit">
+                  <input type="number" name="franges" placeholder="Ex : 10" min="0">
+                  <span class="unit">cm</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>= longueur de chaîne nécessaire par article</label>
+                <div class="calc-result" id="calc-long-chaine-necessaire-article">—</div>
+              </div>
+              <div class="form-group">
+                <label>× nombre d'articles</label>
+                <input type="number" name="nb_articles" placeholder="Ex : 3" min="1" value="1">
+              </div>
+              <div class="form-group">
+                <label>+ pertes attachages (60 cm fixe)</label>
+                <div class="calc-result">20 + 40 = 60 cm</div>
+              </div>
+              <div class="form-group">
+                <label><strong>= longueur de chaîne nécessaire</strong></label>
+                <div class="calc-result" id="calc-long-chaine-totale" style="font-weight:700; color:var(--color-accent);">—</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quantités chaîne -->
+          <div>
+            <p style="font-size:0.85rem; font-weight:600; color:var(--color-accent); margin-bottom:0.75rem;">Quantités et coût — Chaîne</p>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>= Nombre de fils de chaîne</label>
+                <div class="calc-result" id="calc-nb-fils-chaine">—</div>
+              </div>
+              <div class="form-group">
+                <label>= Quantité en mètres</label>
+                <div class="calc-result" id="calc-qte-fils-m">—</div>
+              </div>
+              <div class="form-group">
+                <label>= Quantité en kilos</label>
+                <div class="calc-result" id="calc-qte-fils-kg">—</div>
+              </div>
+              <div class="form-group">
+                <label>Prix au kg (chaîne)</label>
+                <div class="input-with-unit">
+                  <input type="number" name="prix_chaine_kg" placeholder="Ex : 18.50" min="0" step="0.01">
+                  <span class="unit">€/kg</span>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>= Coût de la chaîne</label>
+                <div class="calc-result" id="calc-cout-chaine" style="font-weight:700; color:var(--color-accent);">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── SECTION 3 : Calcul de la trame ── -->
+        <div class="form-section">
+          <div class="form-section-title">Calcul de la trame</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>= Nombre de fils de trame (duites)</label>
+              <div class="calc-result" id="calc-nb-fils-trame">—</div>
+            </div>
+            <div class="form-group">
+              <label>= Quantité en mètres</label>
+              <div class="calc-result" id="calc-qte-trame-m">—</div>
+            </div>
+            <div class="form-group">
+              <label>= Quantité en kilos</label>
+              <div class="calc-result" id="calc-qte-trame-kg">—</div>
+            </div>
+            <div class="form-group">
+              <label>Prix au kg (trame)</label>
+              <div class="input-with-unit">
+                <input type="number" name="prix_trame_kg" placeholder="Ex : 12.00" min="0" step="0.01">
+                <span class="unit">€/kg</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>= Coût de la trame</label>
+              <div class="calc-result" id="calc-cout-trame" style="font-weight:700; color:var(--color-accent);">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── SECTION 4 : Tableau d'ourdissage ── -->
+        <div class="form-section">
+          <div class="form-section-title">Tableau d'ourdissage des fils de chaîne</div>
+          <div style="overflow-x:auto;">
+            <table class="ourdissage-table">
+              <thead>
+                <tr>
+                  <th>Couleur</th>
+                  <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th>
+                  <th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th><th>16</th>
+                  <th>=</th>
+                </tr>
+              </thead>
+              <tbody id="ourdissage-tbody">
+                <!-- Généré par JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── SECTION 5 : Tableau de comptage de lisses ── -->
+        <div class="form-section">
+          <div class="form-section-title">Tableau de comptage de lisses</div>
+          <div style="overflow-x:auto;">
+            <table class="lisses-table">
+              <thead>
+                <tr>
+                  <th rowspan="2">Cadres</th>
+                  <th colspan="3">Lisses par groupe</th>
+                  <th colspan="3">× nb répétitions de chaque motif</th>
+                  <th rowspan="2">+ reste hors motif</th>
+                  <th rowspan="2">= total lisses par cadre</th>
+                </tr>
+                <tr>
+                  <th>Motif 1</th><th>Motif 2</th><th>Motif 3</th>
+                  <th>Motif 1</th><th>Motif 2</th><th>Motif 3</th>
+                </tr>
+              </thead>
+              <tbody id="lisses-tbody">
+                <!-- Généré par JS -->
+              </tbody>
+              <tfoot>
+                <tr class="total-row">
+                  <td>Total</td>
+                  <td colspan="7"></td>
+                  <td><input type="number" id="lisses-total" placeholder="Total" style="width:60px"> lisses</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── SECTION 6 : Schéma ── -->
+        <div class="form-section">
+          <div class="form-section-title">Schéma d'enlaçage, d'attachage et de pédalage</div>
+          <input type="hidden" id="schema-b64">
+          <div class="schema-upload-area" onclick="document.getElementById('schema-file').click()">
+            <div id="schema-preview"></div>
+            <p style="margin-top:0.5rem; color:var(--color-text-muted);">
+              Cliquez pour ajouter une photo ou un scan de votre schéma
+            </p>
+          </div>
+          <input type="file" id="schema-file" accept="image/*" style="display:none"
+                 onchange="handleSchemaUpload(this)">
+          <button type="button" class="btn btn-sm btn-danger" style="margin-top:0.5rem;"
+                  onclick="document.getElementById('schema-b64').value=''; document.getElementById('schema-preview').innerHTML=''; document.getElementById('schema-file').value='';">
+            Supprimer le schéma
+          </button>
+        </div>
+
+        <!-- ── SECTION 7 : Notes ── -->
+        <div class="form-section">
+          <div class="form-section-title">Notes libres</div>
+          <textarea name="notes" placeholder="Observations, remarques, idées pour la prochaine fois…" rows="4"></textarea>
+        </div>
+
+        <!-- ── BOUTONS BAS DE FORMULAIRE ── -->
+        <div class="form-section" style="display:flex; justify-content:flex-end; gap:0.75rem;">
+          <button type="button" class="btn" onclick="showView('view-list'); renderFichesList();">Annuler</button>
+          <button type="button" class="btn btn-primary" onclick="saveFiche()">Enregistrer la fiche</button>
+        </div>
+
+      </div><!-- /form-container -->
+    </form>
+  </div><!-- /view-form -->
+
+</main>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL — Supprimer
+═══════════════════════════════════════════════════════════ -->
+<div id="modal-delete" class="modal-overlay">
+  <div class="modal">
+    <h3>Supprimer la fiche</h3>
+    <p>Êtes-vous sûre de vouloir supprimer la fiche <strong id="delete-fiche-name"></strong> ? Cette action est irréversible.</p>
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('modal-delete').classList.remove('open')">Annuler</button>
+      <button class="btn btn-danger" onclick="deleteFiche()">Supprimer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MODAL — Configuration GitHub
+═══════════════════════════════════════════════════════════ -->
+<div id="modal-config" class="modal-overlay">
+  <div class="modal">
+    <h3>Connexion GitHub</h3>
+    <p>Vos fiches seront sauvegardées dans le fichier <code>data/fiches.json</code> de votre dépôt GitHub. Le token n'est stocké que dans votre navigateur (localStorage).</p>
+
+    <div class="form-group">
+      <label for="input-gh-token">Token GitHub (Personal Access Token)</label>
+      <input type="password" id="input-gh-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+      <small style="font-size:0.75rem; color:var(--color-text-muted);">
+        Permissions requises : <code>repo</code> (lecture + écriture sur le dépôt)
+      </small>
+    </div>
+    <div class="form-group">
+      <label for="input-gh-owner">Nom d'utilisateur GitHub</label>
+      <input type="text" id="input-gh-owner" placeholder="votre-pseudo">
+    </div>
+    <div class="form-group">
+      <label for="input-gh-repo">Nom du dépôt</label>
+      <input type="text" id="input-gh-repo" placeholder="fiches-tissage">
+    </div>
+    <div class="form-group">
+      <label for="input-gh-branch">Branche</label>
+      <input type="text" id="input-gh-branch" placeholder="main" value="main">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" onclick="document.getElementById('modal-config').classList.remove('open')">Annuler</button>
+      <button class="btn btn-primary" onclick="saveConfig()">Connecter</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     TOASTS
+═══════════════════════════════════════════════════════════ -->
+<div id="toast-container"></div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
