@@ -633,26 +633,63 @@ textarea { resize: vertical; min-height: 80px; }
 }
 
 /* Conteneur principal du draft */
+/* ─── DRAFT : disposition Betty Briand ───────────────────────────────────────
+   Layout :
+     ┌───────────────────────┬──────────────┐
+     │  Enlaçage             │  Attachage   │
+     │  (fils × duites)      │(cadres×péd.) │
+     └───────────────────────┴──────────────┘
+                             │  Pédalage    │
+                             │(duites×péd.) │
+                             └──────────────┘
+──────────────────────────────────────────────────────────────────────────── */
 .draft-container {
   overflow-x: auto;
   padding: 0.5rem 0;
+  /* Grille 2 colonnes : enlaçage (auto) | colonne droite (auto) */
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  grid-template-rows: auto auto;
+  gap: 8px;
+  align-items: start;
 }
 
+/* Enlaçage : colonne 1, lignes 1-2 */
+.draft-zone-enlacement {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Attachage : colonne 2, ligne 1 */
+.draft-zone-attachage {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Pédalage : colonne 2, ligne 2 */
+.draft-zone-pedalage {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Compatibilité avec les anciennes classes (vue lecture seule) */
 .draft-top {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  margin-bottom: 8px;
+  display: contents;
 }
-
 .draft-bottom {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
+  display: contents;
 }
-
 .draft-spacer {
-  flex: 1;
+  display: none;
 }
 
 .draft-zone {
