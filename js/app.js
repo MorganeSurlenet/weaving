@@ -208,6 +208,13 @@ function openFicheDetail(id) {
   document.getElementById('detail-title').textContent = fiche.projet || 'Fiche sans titre';
   document.getElementById('btn-edit-detail').onclick = () => openEditFiche(id);
   document.getElementById('btn-print-detail').onclick = () => window.print();
+  // Rendu lecture seule du schéma
+  if (typeof SchemaEditor !== 'undefined' && fiche.schema_data) {
+    SchemaEditor.renderReadOnly('schema-readonly-container', fiche.schema_data);
+  } else {
+    const el = document.getElementById('schema-readonly-container');
+    if (el) el.innerHTML = '<p style="color:var(--color-text-muted); text-align:center; font-style:italic;">Aucun schéma enregistré.</p>';
+  }
   showView('view-detail');
 }
 
@@ -317,9 +324,7 @@ function renderFicheDetailHTML(f) {
   <!-- Schéma -->
   <div class="fiche-section">
     <div class="fiche-section-title">Schéma d'enlaçage, d'attachage et de pédalage</div>
-    ${f.schema_image
-      ? `<img src="${f.schema_image}" alt="Schéma" style="max-width:100%; border:1px solid var(--color-border); border-radius:4px;">`
-      : '<p style="color:var(--color-text-muted); text-align:center; font-style:italic;">Aucun schéma enregistré.</p>'}
+    <div id="schema-readonly-container"></div>
     ${f.notes ? `<div style="margin-top:1rem; padding:0.75rem; background:var(--color-accent-bg); border-radius:4px; font-size:0.875rem;"><strong>Notes :</strong> ${f.notes}</div>` : ''}
   </div>`;
 }
@@ -521,8 +526,10 @@ function resetForm() {
   // Réinitialiser les tableaux dynamiques
   initOurdissageForm([]);
   initLissesForm({});
-  document.getElementById('schema-preview').innerHTML = '';
-  document.getElementById('schema-b64').value = '';
+  // Réinitialiser l'éditeur de schéma
+  if (typeof SchemaEditor !== 'undefined') {
+    SchemaEditor.init();
+  }
   updateFormCalcs();
 }
 
@@ -547,9 +554,13 @@ function fillForm(f) {
   convertTitrage('trame');
   initOurdissageForm(f.ourdissage || []);
   initLissesForm(f.lisses || {});
-  if (f.schema_image) {
-    document.getElementById('schema-preview').innerHTML = `<img src="${f.schema_image}" alt="Schéma">`;
-    document.getElementById('schema-b64').value = f.schema_image;
+  // Charger le schéma interactif
+  if (typeof SchemaEditor !== 'undefined') {
+    if (f.schema_data) {
+      SchemaEditor.loadFromData(f.schema_data);
+    } else {
+      SchemaEditor.init();
+    }
   }
   updateFormCalcs();
 }
@@ -573,7 +584,13 @@ function collectFormData() {
   });
   data.ourdissage = collectOurdissageData();
   data.lisses = collectLissesData();
-  data.schema_image = document.getElementById('schema-b64').value || '';
+  // Sauvegarder le schéma interactif
+  if (typeof SchemaEditor !== 'undefined') {
+    SchemaEditor.saveToHiddenField();
+  }
+  const schemaField = document.getElementById('schema-data');
+  data.schema_data = schemaField ? schemaField.value : '';
+  data.schema_image = '';
   return data;
 }
 
