@@ -89,6 +89,24 @@ const SchemaEditor = {
         cell.addEventListener('mouseover', () => {
           if (this._dragging) this._toggle(gridName, r, c, this._paintValue);
         });
+        // Support tactile mobile
+        cell.addEventListener('touchstart', e => {
+          e.preventDefault();
+          this._dragging = true;
+          this._paintValue = !data[r][c];
+          this._toggle(gridName, r, c, this._paintValue);
+        }, { passive: false });
+        cell.addEventListener('touchmove', e => {
+          e.preventDefault();
+          const touch = e.touches[0];
+          const el = document.elementFromPoint(touch.clientX, touch.clientY);
+          if (el && el.dataset.grid) {
+            const tr = parseInt(el.dataset.r);
+            const tc = parseInt(el.dataset.c);
+            this._toggle(el.dataset.grid, tr, tc, this._paintValue);
+          }
+        }, { passive: false });
+        cell.addEventListener('touchend', () => { this._dragging = false; });
 
         container.appendChild(cell);
       }
