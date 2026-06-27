@@ -242,11 +242,11 @@ function renderFicheDetailHTML(f) {
       <tr><td class="row-label">Source d'inspiration</td><td colspan="3">${val(f.source_inspiration)}</td></tr>
       <tr>
         <td class="row-label">Fil de chaîne</td><td>${val(f.fil_chaine)}</td>
-        <td class="row-label">Titrage</td><td>${val(f.titrage_chaine, 'm/kg')}</td>
+        <td class="row-label">Titrage</td><td>${f.titrage_chaine_val ? `<strong>${f.titrage_chaine_val} ${f.titrage_chaine_sys||'Nm'}</strong> <span style="color:var(--color-text-muted);font-size:0.8em;">(${f.titrage_chaine ? Math.round(f.titrage_chaine).toLocaleString('fr-FR') + ' m/kg' : '—'})</span>` : val(null)}</td>
       </tr>
       <tr>
         <td class="row-label">Fil de trame</td><td>${val(f.fil_trame)}</td>
-        <td class="row-label">Titrage</td><td>${val(f.titrage_trame, 'm/kg')}</td>
+        <td class="row-label">Titrage</td><td>${f.titrage_trame_val ? `<strong>${f.titrage_trame_val} ${f.titrage_trame_sys||'Nm'}</strong> <span style="color:var(--color-text-muted);font-size:0.8em;">(${f.titrage_trame ? Math.round(f.titrage_trame).toLocaleString('fr-FR') + ' m/kg' : '—'})</span>` : val(null)}</td>
       </tr>
       <tr><td class="row-label">Armure</td><td colspan="3">${val(f.armure)}</td></tr>
       <tr>
@@ -378,6 +378,51 @@ function renderLissesDetail(lisses) {
   </table>`;
 }
 
+// ─── CONVERSION TITRAGE ────────────────────────────────────
+// Notation X/Y : le titrage réel = X ÷ Y
+// Nm  (laine, soie)       : m/kg = Nm × 1000
+// NeC (coton)             : m/kg = NeC × 1693.6
+// NeL (lin, cotolin)      : m/kg = NeL × 1500
+function parseTitrageVal(raw) {
+  // Accepte "16/2", "16.5/2", "16" etc.
+  const s = String(raw).trim();
+  const slash = s.indexOf('/');
+  if (slash !== -1) {
+    const num = parseFloat(s.slice(0, slash));
+    const den = parseFloat(s.slice(slash + 1));
+    if (!isNaN(num) && !isNaN(den) && den !== 0) return num / den;
+    return null;
+  }
+  const v = parseFloat(s);
+  return isNaN(v) ? null : v;
+}
+
+function titrageToMkg(val, sys) {
+  const v = parseTitrageVal(val);
+  if (v === null || v <= 0) return null;
+  if (sys === 'Nm')  return v * 1000;      // Nm × 1000 = m/kg
+  if (sys === 'NeC') return v * 1693.6;   // NeC × 1693.6 = m/kg
+  if (sys === 'NeL') return v * 1500;     // NeL × 1500 = m/kg
+  return v * 1000;
+}
+
+function convertTitrage(type) {
+  const valEl  = document.getElementById(`f-titrage-${type}-val`);
+  const sysEl  = document.getElementById(`f-titrage-${type}-sys`);
+  const hidEl  = document.getElementById(`f-titrage-${type}`);
+  const dispEl = document.getElementById(`titrage-${type}-mkg`);
+  if (!valEl || !sysEl || !hidEl || !dispEl) return;
+  const mkg = titrageToMkg(valEl.value, sysEl.value);
+  if (mkg !== null) {
+    hidEl.value = mkg.toFixed(0);
+    dispEl.textContent = Math.round(mkg).toLocaleString('fr-FR');
+  } else {
+    hidEl.value = '';
+    dispEl.textContent = '—';
+  }
+  updateFormCalcs();
+}
+
 // ─── CALCULS ────────────────────────────────────────────────
 function n(v) { const x = parseFloat(v); return isNaN(x) ? null : x; }
 
@@ -485,7 +530,8 @@ function fillForm(f) {
   const form = document.getElementById('fiche-form');
   const fields = [
     'projet','source_inspiration',
-    'fil_chaine','titrage_chaine','fil_trame','titrage_trame',
+    'fil_chaine','titrage_chaine_val','titrage_chaine_sys','titrage_chaine',
+    'fil_trame','titrage_trame_val','titrage_trame_sys','titrage_trame',
     'armure','densite_chaine','densite_trame','peigne_dents','fils_par_dent',
     'larg_souhaitee','larg_ajout_traitement_pct','larg_ajout_retrait_pct',
     'long_souhaitee','long_ajout_traitement_pct','long_ajout_retrait_pct',
@@ -496,6 +542,9 @@ function fillForm(f) {
     const el = form.querySelector(`[name="${field}"]`);
     if (el && f[field] !== undefined) el.value = f[field];
   });
+  // Mettre à jour l'affichage m/kg après chargement
+  convertTitrage('chaine');
+  convertTitrage('trame');
   initOurdissageForm(f.ourdissage || []);
   initLissesForm(f.lisses || {});
   if (f.schema_image) {
@@ -510,7 +559,8 @@ function collectFormData() {
   const data = {};
   const fields = [
     'projet','source_inspiration',
-    'fil_chaine','titrage_chaine','fil_trame','titrage_trame',
+    'fil_chaine','titrage_chaine_val','titrage_chaine_sys','titrage_chaine',
+    'fil_trame','titrage_trame_val','titrage_trame_sys','titrage_trame',
     'armure','densite_chaine','densite_trame','peigne_dents','fils_par_dent',
     'larg_souhaitee','larg_ajout_traitement_pct','larg_ajout_retrait_pct',
     'long_souhaitee','long_ajout_traitement_pct','long_ajout_retrait_pct',
