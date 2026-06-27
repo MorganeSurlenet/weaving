@@ -240,7 +240,6 @@ function renderFicheDetailHTML(f) {
     <table class="data-table">
       <tr><td class="row-label">Projet du tissu</td><td colspan="3">${val(f.projet)}</td></tr>
       <tr><td class="row-label">Source d'inspiration</td><td colspan="3">${val(f.source_inspiration)}</td></tr>
-      <tr><td class="row-label">Mesures finales</td><td colspan="3">${val(f.mesures_finales)}</td></tr>
       <tr>
         <td class="row-label">Fil de chaîne</td><td>${val(f.fil_chaine)}</td>
         <td class="row-label">Titrage</td><td>${val(f.titrage_chaine, 'm/kg')}</td>
@@ -485,7 +484,7 @@ function resetForm() {
 function fillForm(f) {
   const form = document.getElementById('fiche-form');
   const fields = [
-    'projet','source_inspiration','mesures_finales',
+    'projet','source_inspiration',
     'fil_chaine','titrage_chaine','fil_trame','titrage_trame',
     'armure','densite_chaine','densite_trame','peigne_dents','fils_par_dent',
     'larg_souhaitee','larg_ajout_traitement_pct','larg_ajout_retrait_pct',
@@ -510,7 +509,7 @@ function collectFormData() {
   const form = document.getElementById('fiche-form');
   const data = {};
   const fields = [
-    'projet','source_inspiration','mesures_finales',
+    'projet','source_inspiration',
     'fil_chaine','titrage_chaine','fil_trame','titrage_trame',
     'armure','densite_chaine','densite_trame','peigne_dents','fils_par_dent',
     'larg_souhaitee','larg_ajout_traitement_pct','larg_ajout_retrait_pct',
