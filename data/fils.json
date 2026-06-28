@@ -1,15 +1,15 @@
 [
   {
-    "id": "fil_exemple",
     "marque": "Fonty",
     "reference": "Tartelette",
     "matiere": "Laine",
     "coloris": "Ecru",
     "couleur": "#f5f0e8",
     "nm": "6/1",
-    "nm_calc": 6000,
     "prix_kg": 35,
-    "notes": "Fil exemple"
+    "notes": "Fil exemple",
+    "id": "fil_exemple",
+    "nm_calc": 6000
   },
   {
     "marque": "eee",
