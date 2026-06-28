@@ -260,6 +260,7 @@ saveFilModal = async function() {
     nm:        document.getElementById('fil-nm').value.trim(),
     prix_kg:   parseFloat(document.getElementById('fil-prix-kg').value) || 0,
     notes:     document.getElementById('fil-notes').value.trim(),
+    lien:      document.getElementById('fil-lien').value.trim(),
   };
   if (!fil.marque && !fil.reference) { showToast('Renseignez au moins la marque ou la référence', 'error'); return; }
   let newId;
