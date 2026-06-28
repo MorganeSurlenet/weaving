@@ -225,7 +225,7 @@ function applyFilToForm(type) {
     if (el) el.value = val || '';
   };
 
-  setField(`fil_${type}`, [fil.marque, fil.reference].filter(Boolean).join(' '));
+  setField(`fil_${type}`, fil.matiere || '');
   setField(`titrage_${type}_val`, fil.nm || '');
   setField(`prix_${type}_kg`, fil.prix_kg || '');
 
