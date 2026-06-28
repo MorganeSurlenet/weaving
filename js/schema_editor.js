@@ -395,23 +395,55 @@ const BlocsEnlissage = {
   blocs: [],   // [{name, pattern}]
   _nextName: 65, // code ASCII de 'A'
 
-  // Retourne la lettre suivante disponible
+  // Retourne la plus petite lettre disponible (repart toujours de A)
   _nextLetter() {
     const used = new Set(this.blocs.map(b => b.name));
-    let code = this._nextName;
+    let code = 65; // 'A'
     while (used.has(String.fromCharCode(code))) code++;
-    this._nextName = code + 1;
     return String.fromCharCode(code);
   },
+
+  // Couleurs par défaut pour les premiers blocs
+  _defaultColors: ['#4a90d9','#e67e22','#27ae60','#8e44ad','#c0392b','#16a085','#f39c12','#2c3e50'],
 
   // Ajoute un nouveau bloc vide
   add() {
     const name = this._nextLetter();
     const shafts = SchemaEditor.shafts;
-    const size = 4; // taille par défaut
+    const size = 4;
     const pattern = Array.from({length: shafts}, () => Array(size).fill(false));
-    this.blocs.push({ name, pattern, size });
+    const colorIdx = this.blocs.length % this._defaultColors.length;
+    this.blocs.push({ name, pattern, size, color: this._defaultColors[colorIdx] });
     this.render();
+  },
+
+  // Met à jour la couleur d'un bloc
+  setColor(name, color) {
+    const bloc = this.blocs.find(b => b.name === name);
+    if (bloc) { bloc.color = color; this.renderBand(); }
+  },
+
+  // Affiche la bande colorée au-dessus de la grille d'enlissage
+  renderBand() {
+    const band = document.getElementById('blocs-band');
+    if (!band || !this._lastSequence) return;
+    const cellSize = SchemaEditor.cols > 32 ? 10 : SchemaEditor.cols > 20 ? 12 : 14;
+    const blocMap = {};
+    this.blocs.forEach(b => { blocMap[b.name] = b; });
+    band.innerHTML = '';
+    band.style.gap = '1px';
+    for (const t of this._lastSequence) {
+      const bloc = blocMap[t];
+      if (!bloc) continue;
+      const bSize = bloc.size || bloc.pattern[0]?.length || 4;
+      const seg = document.createElement('div');
+      seg.style.cssText = `width:${bSize * cellSize + (bSize - 1)}px; height:14px; background:${bloc.color || '#ccc'}; border-radius:2px; flex-shrink:0; display:flex; align-items:center; justify-content:center;`;
+      const lbl = document.createElement('span');
+      lbl.style.cssText = 'font-size:9px; font-weight:700; color:#fff; text-shadow:0 0 2px rgba(0,0,0,0.5); line-height:1;';
+      lbl.textContent = bloc.name;
+      seg.appendChild(lbl);
+      band.appendChild(seg);
+    }
   },
 
   // Supprime un bloc par nom
@@ -490,6 +522,20 @@ const BlocsEnlissage = {
       }
       wrap.appendChild(gridEl);
 
+      // Couleur du bloc
+      const colorCol = document.createElement('div');
+      colorCol.style.cssText = 'display:flex; flex-direction:column; gap:4px; font-size:0.75rem; align-items:center;';
+      const colorLbl = document.createElement('label');
+      colorLbl.textContent = 'Couleur';
+      const colorInput = document.createElement('input');
+      colorInput.type = 'color';
+      colorInput.value = bloc.color || '#4a90d9';
+      colorInput.style.cssText = 'width:32px; height:24px; padding:0; border:none; cursor:pointer;';
+      colorInput.oninput = () => this.setColor(bloc.name, colorInput.value);
+      colorCol.appendChild(colorLbl);
+      colorCol.appendChild(colorInput);
+      wrap.appendChild(colorCol);
+
       // Taille du bloc
       const sizeCol = document.createElement('div');
       sizeCol.style.cssText = 'display:flex; flex-direction:column; gap:4px; font-size:0.75rem;';
@@ -526,6 +572,7 @@ const BlocsEnlissage = {
     // Construire la séquence complète
     const fullSeq = [];
     for (let i = 0; i < repeat; i++) fullSeq.push(...tokens);
+    this._lastSequence = fullSeq; // mémoriser pour renderBand
 
     // Calculer le nombre total de fils nécessaires
     const totalCols = fullSeq.reduce((s, t) => s + (blocMap[t].size || blocMap[t].pattern[0]?.length || 4), 0);
@@ -539,13 +586,19 @@ const BlocsEnlissage = {
       SchemaEditor.initData(false);
     }
 
-    // Remplir l'enlissage
+    // Remplir l'enlissage de gauche à droite (fil 0 = premier fil à gauche)
+    // Réinitialiser toute la grille d'enlissage à false
+    for (let r = 0; r < shafts; r++)
+      for (let c = 0; c < totalCols; c++)
+        SchemaEditor.enlissage[r][c] = false;
+
     let col = 0;
     for (const t of fullSeq) {
       const bloc = blocMap[t];
       const bSize = bloc.size || bloc.pattern[0]?.length || 4;
       for (let c = 0; c < bSize; c++) {
         for (let r = 0; r < shafts; r++) {
+          // On copie le pattern tel quel : colonne 0 du bloc → fil le plus à gauche
           SchemaEditor.enlissage[r][col + c] = bloc.pattern[r]?.[c] || false;
         }
       }
@@ -563,6 +616,7 @@ const BlocsEnlissage = {
 
     SchemaEditor.render();
     SchemaEditor.saveToHiddenField();
+    this.renderBand();
     showToast(`Enlissage rempli : ${totalCols} fils en ${fullSeq.length} blocs.`, 'success');
   }
 };
