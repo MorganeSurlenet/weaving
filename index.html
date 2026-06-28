@@ -122,14 +122,25 @@
                     <input type="text" id="f-fil-chaine" name="fil_chaine" placeholder="Ex : Lin, Coton, Laine…">
                   </div>
                   <div class="form-group">
-                    <label for="f-titrage-chaine-val">Titrage (Nm)</label>
-                    <div style="display:flex; gap:0.4rem; align-items:flex-start;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                      <label style="margin:0;" id="label-titrage-chaine">Titrage (Nm)</label>
+                      <button type="button" class="btn btn-sm" onclick="toggleTitrageMode('chaine')" id="btn-titrage-mode-chaine" style="font-size:0.7rem; padding:0.2rem 0.5rem;">Saisir en m/kg</button>
+                    </div>
+                    <!-- Mode Nm -->
+                    <div id="titrage-chaine-nm-zone" style="display:flex; gap:0.4rem; align-items:flex-start;">
                       <div class="input-with-unit" style="flex:1;">
                         <input type="text" id="f-titrage-chaine-val" name="titrage_chaine_val" placeholder="Ex : 16/2" oninput="convertTitrage('chaine')">
                         <span class="unit">Nm</span>
                         <input type="hidden" name="titrage_chaine_sys" id="f-titrage-chaine-sys" value="Nm">
                       </div>
                       <button type="button" class="btn btn-sm" onclick="openConvertisseur('chaine')" title="Convertir depuis NeC ou NeL" style="flex-shrink:0; padding:0.45rem 0.5rem;">&#8644;</button>
+                    </div>
+                    <!-- Mode m/kg -->
+                    <div id="titrage-chaine-mkg-zone" style="display:none;">
+                      <div class="input-with-unit">
+                        <input type="number" id="f-titrage-chaine-mkg-direct" placeholder="Ex : 8000" min="1" step="1" oninput="convertTitrageFromMkg('chaine')">
+                        <span class="unit">m/kg</span>
+                      </div>
                     </div>
                     <div style="font-size:0.75rem; color:var(--color-text-muted); margin-top:4px;">
                       = <span id="titrage-chaine-mkg">—</span> m/kg
@@ -174,14 +185,25 @@
                     <input type="text" id="f-fil-trame" name="fil_trame" placeholder="Ex : Lin, Coton, Laine…">
                   </div>
                   <div class="form-group">
-                    <label for="f-titrage-trame-val">Titrage (Nm)</label>
-                    <div style="display:flex; gap:0.4rem; align-items:flex-start;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                      <label style="margin:0;" id="label-titrage-trame">Titrage (Nm)</label>
+                      <button type="button" class="btn btn-sm" onclick="toggleTitrageMode('trame')" id="btn-titrage-mode-trame" style="font-size:0.7rem; padding:0.2rem 0.5rem;">Saisir en m/kg</button>
+                    </div>
+                    <!-- Mode Nm -->
+                    <div id="titrage-trame-nm-zone" style="display:flex; gap:0.4rem; align-items:flex-start;">
                       <div class="input-with-unit" style="flex:1;">
                         <input type="text" id="f-titrage-trame-val" name="titrage_trame_val" placeholder="Ex : 8/2" oninput="convertTitrage('trame')">
                         <span class="unit">Nm</span>
                         <input type="hidden" name="titrage_trame_sys" id="f-titrage-trame-sys" value="Nm">
                       </div>
                       <button type="button" class="btn btn-sm" onclick="openConvertisseur('trame')" title="Convertir depuis NeC ou NeL" style="flex-shrink:0; padding:0.45rem 0.5rem;">&#8644;</button>
+                    </div>
+                    <!-- Mode m/kg -->
+                    <div id="titrage-trame-mkg-zone" style="display:none;">
+                      <div class="input-with-unit">
+                        <input type="number" id="f-titrage-trame-mkg-direct" placeholder="Ex : 5000" min="1" step="1" oninput="convertTitrageFromMkg('trame')">
+                        <span class="unit">m/kg</span>
+                      </div>
                     </div>
                     <div style="font-size:0.75rem; color:var(--color-text-muted); margin-top:4px;">
                       = <span id="titrage-trame-mkg">—</span> m/kg
