@@ -257,5 +257,70 @@ const SchemaEditor = {
 };
 
 // Fonctions globales appelées depuis le HTML
-function resizeSchemaGrids() { SchemaEditor.resize(); }
-function clearSchema()       { SchemaEditor.clear(); }
+function resizeSchemaGrids() {
+  SchemaEditor.resize();
+  updateSchemaPreview();
+}
+function clearSchema() {
+  SchemaEditor.clear();
+  updateSchemaPreview();
+}
+
+// Basculer l'éditeur de schéma
+function toggleSchemaEditor() {
+  const editorZone  = document.getElementById('schema-editor-zone');
+  const previewZone = document.getElementById('schema-preview-zone');
+  const btn         = document.getElementById('btn-edit-schema');
+  if (!editorZone) return;
+
+  const isOpen = editorZone.style.display !== 'none';
+  if (isOpen) {
+    closeSchemaEditor();
+  } else {
+    editorZone.style.display  = 'block';
+    previewZone.style.display = 'none';
+    btn.textContent = 'Fermer l\'éditeur';
+    // Initialiser l'éditeur si pas encore fait
+    SchemaEditor.init();
+  }
+}
+
+// Fermer l'éditeur et afficher l'aperçu
+function closeSchemaEditor() {
+  const editorZone  = document.getElementById('schema-editor-zone');
+  const previewZone = document.getElementById('schema-preview-zone');
+  const btn         = document.getElementById('btn-edit-schema');
+  if (!editorZone) return;
+  editorZone.style.display  = 'none';
+  previewZone.style.display = 'block';
+  btn.textContent = 'Modifier le schéma';
+  updateSchemaPreview();
+}
+
+// Mettre à jour l'aperçu lecture seule dans le formulaire
+function updateSchemaPreview() {
+  const field = document.getElementById('schema-data');
+  const display = document.getElementById('schema-readonly-display');
+  if (!display) return;
+  const raw = field ? field.value : '';
+  if (!raw) {
+    display.innerHTML = '<span style="color:var(--color-text-muted); font-size:0.85rem;">Aucun schéma — cliquez sur "Modifier le schéma" pour en créer un.</span>';
+    return;
+  }
+  try {
+    const d = JSON.parse(raw);
+    // Vérifier si le schéma a des données
+    const hasData = d.enlacement?.some(row => row.some(v => v)) ||
+                    d.attachage?.some(row => row.some(v => v)) ||
+                    d.pedalage?.some(row => row.some(v => v));
+    if (!hasData) {
+      display.innerHTML = '<span style="color:var(--color-text-muted); font-size:0.85rem;">Schéma vide — cliquez sur "Modifier le schéma" pour le remplir.</span>';
+      return;
+    }
+    // Afficher le schéma en lecture seule
+    display.innerHTML = '';
+    SchemaEditor.renderReadOnly('schema-readonly-display', d);
+  } catch(e) {
+    display.innerHTML = '<span style="color:var(--color-text-muted); font-size:0.85rem;">Schéma non lisible.</span>';
+  }
+}
