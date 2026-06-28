@@ -466,6 +466,12 @@ const BlocsEnlissage = {
     this.occurrenceColors[idx] = color;
     this._applyColorsToGrid();
     this.renderBand();
+    // Synchroniser le tableau d'ourdissage
+    if (this._lastSequence && this._lastSequence.length) {
+      const blocMap = {};
+      this.blocs.forEach(b => { blocMap[b.name] = b; });
+      syncOurdissageFromEnlissage(this._lastSequence, blocMap, this.occurrenceColors, this._defaultColors);
+    }
   },
 
   // Affiche la bande colorée au-dessus de la grille d'enlissage
