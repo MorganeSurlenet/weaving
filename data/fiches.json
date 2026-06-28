@@ -30,6 +30,7 @@
     "notes": "",
     "ourdissage": [
       {
+        "hex": "#3986ea",
         "couleur": "Bleu acier",
         "sequence": [
           "12",
@@ -42,6 +43,8 @@
           "",
           "",
           "",
+          "36",
+          "",
           "",
           "",
           "",
@@ -49,9 +52,10 @@
           "",
           ""
         ],
-        "total": ""
+        "total": "60"
       },
       {
+        "hex": "#d6ecff",
         "couleur": "Bleu ciel",
         "sequence": [
           "",
@@ -63,7 +67,9 @@
           "",
           "",
           "",
+          "12",
           "",
+          "12",
           "",
           "",
           "",
@@ -71,13 +77,16 @@
           "",
           ""
         ],
-        "total": ""
+        "total": "60"
       },
       {
+        "hex": "#ffc2e5",
         "couleur": "Rose",
         "sequence": [
           "",
           "",
+          "",
+          "12",
           "",
           "12",
           "",
@@ -87,13 +96,88 @@
           "",
           "",
           "",
-          "",
+          "36",
           "",
           "",
           "",
           ""
         ],
-        "total": ""
+        "total": "60"
+      },
+      {
+        "hex": "#c10673",
+        "couleur": "Fushia",
+        "sequence": [
+          "",
+          "",
+          "",
+          "",
+          "36",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "12",
+          "",
+          "12",
+          "",
+          "",
+          ""
+        ],
+        "total": "60"
+      },
+      {
+        "hex": "#e6f99a",
+        "couleur": "Citron vert",
+        "sequence": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "12",
+          "",
+          "12",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "36",
+          ""
+        ],
+        "total": "60"
+      },
+      {
+        "hex": "#70aa64",
+        "couleur": "Vert lichen",
+        "sequence": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "36",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "12",
+          "",
+          "12"
+        ],
+        "total": "60"
       }
     ],
     "lisses": {
@@ -181,7 +265,7 @@
     },
     "schema_data": "{\"cols\":60,\"rows\":16,\"shafts\":4,\"treadles\":6,\"enlissage\":[[true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false],[false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false],[false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false],[false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true]],\"attachage\":[[false,true,false,false,true,false],[false,true,true,false,false,true],[true,false,true,true,true,false],[true,false,false,true,true,false]],\"pedalage\":[[true,false,false,false,false,false],[false,true,false,false,false,false],[false,false,true,false,false,false],[false,false,false,true,false,false],[false,false,false,false,true,false],[false,false,false,false,false,true],[false,false,false,false,true,false],[false,false,false,true,false,false],[false,false,true,false,false,false],[false,true,false,false,false,false],[true,false,false,false,false,false],[false,false,false,false,false,false],[false,false,false,false,false,false],[false,false,false,false,false,false],[false,false,false,false,false,false],[false,false,false,false,false,false]]}",
     "schema_image": "",
-    "date_modification": "2026-06-28T08:16:53.773Z",
+    "date_modification": "2026-06-28T08:36:37.668Z",
     "titrage_chaine_mode": "nm",
     "titrage_chaine_mkg_direct": "",
     "titrage_trame_mode": "nm",
