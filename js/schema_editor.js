@@ -311,7 +311,7 @@ const SchemaEditor = {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    const makeReadOnlyGrid = (parentEl, label, gridData, rows, cols, colColorMap) => {
+    const makeReadOnlyGrid = (parentEl, label, gridData, rows, cols, colColorMap, rtl) => {
       const zone = document.createElement('div');
       zone.className = 'draft-zone-readonly';
       const lbl = document.createElement('div');
@@ -325,15 +325,18 @@ const SchemaEditor = {
       grid.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
       grid.style.gridTemplateRows    = `repeat(${rows}, ${cellSize}px)`;
       grid.style.gap = '1px';
+      if (rtl) grid.style.direction = 'rtl';
 
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           const cell = document.createElement('div');
           const filled = gridData?.[r]?.[c];
           cell.className = 'schema-cell-ro' + (filled ? ' filled' : '');
-          if (filled && colColorMap && colColorMap[c]) {
-            cell.style.background = colColorMap[c];
-            cell.style.borderColor = colColorMap[c];
+          // En mode rtl, la colonne visuelle c correspond à la colonne de données (cols-1-c)
+          const dataCol = rtl ? (cols - 1 - c) : c;
+          if (filled && colColorMap && colColorMap[dataCol]) {
+            cell.style.background = colColorMap[dataCol];
+            cell.style.borderColor = colColorMap[dataCol];
           }
           grid.appendChild(cell);
         }
@@ -361,12 +364,37 @@ const SchemaEditor = {
       });
     }
 
-    // Enlissage : colonne 1
+    // Enlissage : colonne 1 (direction rtl = fil 1 à droite, comme l'éditeur)
     const zoneEnl = document.createElement('div');
     zoneEnl.className = 'draft-zone-enlacement';
-    // Compatibilité ascendante
+
+    // Bande colorée au-dessus (même sens rtl)
+    if (d.blocsSequence && d.blocsSequence.length && d.blocs && d.blocsColors) {
+      const bandRo = document.createElement('div');
+      bandRo.style.cssText = 'display:flex; flex-direction:row-reverse; height:10px; gap:1px; margin-bottom:2px;';
+      const cellSize = d.cols > 32 ? 8 : d.cols > 20 ? 10 : 12;
+      const blocMapRo = {};
+      d.blocs.forEach(b => { blocMapRo[b.name] = b; });
+      d.blocsSequence.forEach((t, i) => {
+        const bloc = blocMapRo[t];
+        if (!bloc) return;
+        const bSize = bloc.size || bloc.pattern?.[0]?.length || 4;
+        const color = d.blocsColors[i];
+        if (!color) return;
+        const segW = bSize * cellSize + (bSize - 1);
+        const seg = document.createElement('div');
+        seg.style.cssText = `width:${segW}px; height:10px; background:${color}; border-radius:1px; flex-shrink:0; display:flex; align-items:center; justify-content:center;`;
+        const lbl2 = document.createElement('span');
+        lbl2.style.cssText = 'font-size:7px; font-weight:700; color:#fff; pointer-events:none;';
+        lbl2.textContent = t;
+        seg.appendChild(lbl2);
+        bandRo.appendChild(seg);
+      });
+      zoneEnl.appendChild(bandRo);
+    }
+
     const enlData = d.enlissage || d.enlacement;
-    makeReadOnlyGrid(zoneEnl, 'Enlissage', enlData, d.shafts, d.cols, roColMap);
+    makeReadOnlyGrid(zoneEnl, 'Enlissage', enlData, d.shafts, d.cols, roColMap, true);
     container.appendChild(zoneEnl);
 
     // Attachage : colonne 2, ligne 1
