@@ -162,6 +162,47 @@ const SchemaEditor = {
       attachage:  this.attachage,
       pedalage:   this.pedalage,
     });
+    this.validateSchema();
+  },
+
+  // Validation de l'attachage : chaque ligne et chaque colonne doit avoir
+  // au moins une case pleine ET au moins une case vide.
+  validateSchema() {
+    const zone = document.getElementById('schema-validation');
+    if (!zone) return;
+
+    const warnings = [];
+    const att = this.attachage;
+    const nRows = this.shafts;    // cadres
+    const nCols = this.treadles;  // pédales
+
+    // Vérification par ligne (cadre)
+    for (let r = 0; r < nRows; r++) {
+      const filled = att[r].filter(v => v).length;
+      if (filled === 0) {
+        warnings.push(`Attachage — cadre ${r + 1} : aucune pédale assignée (ligne entièrement vide).`);
+      } else if (filled === nCols) {
+        warnings.push(`Attachage — cadre ${r + 1} : toutes les pédales sont assignées (le cadre sera toujours levé).`);
+      }
+    }
+
+    // Vérification par colonne (pédale)
+    for (let c = 0; c < nCols; c++) {
+      const filled = att.filter(row => row[c]).length;
+      if (filled === 0) {
+        warnings.push(`Attachage — pédale ${c + 1} : aucun cadre assigné (colonne entièrement vide).`);
+      } else if (filled === nRows) {
+        warnings.push(`Attachage — pédale ${c + 1} : tous les cadres sont assignés (tous les fils seront levés en même temps).`);
+      }
+    }
+
+    if (warnings.length === 0) {
+      zone.innerHTML = '<div class="schema-valid">&#10003; Attachage valide — chaque cadre et chaque pédale ont au moins une case pleine et une case vide.</div>';
+    } else {
+      zone.innerHTML = warnings
+        .map(w => `<div class="schema-warning">&#9888; ${w}</div>`)
+        .join('');
+    }
   },
 
   loadFromData(data) {
@@ -183,6 +224,7 @@ const SchemaEditor = {
       setVal('schema-treadles', this.treadles);
       this.render();
       this.saveToHiddenField();
+      this.validateSchema();
     } catch(e) { console.warn('Schema load error', e); }
   },
 
@@ -190,6 +232,7 @@ const SchemaEditor = {
     this.initData(false);
     this.render();
     this.saveToHiddenField();
+    this.validateSchema();
   },
 
   resize() {
