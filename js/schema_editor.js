@@ -275,8 +275,8 @@ const SchemaEditor = {
         if (seqInput && d.blocsSequence && d.blocsSequence.length > 0) {
           seqInput.value = d.blocsSequence.join(' ');
         }
-        // Mettre à jour les color pickers
-        updateBlocsColorPickers();
+        // Mettre à jour la bande
+        // (renderBand déjà appelé ci-dessus)
       }
       // Sync les inputs
       const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
@@ -468,48 +468,47 @@ const BlocsEnlissage = {
     this.renderBand();
   },
 
-  // Affiche la bande colorée au-dessus + les sélecteurs de couleur sous la grille d'enlissage
+  // Affiche la bande colorée au-dessus de la grille d'enlissage
+  // Chaque segment est cliquable et ouvre un color picker natif
   renderBand() {
-    const band    = document.getElementById('blocs-band');
-    const colorRow = document.getElementById('blocs-color-row');
+    const band = document.getElementById('blocs-band');
     if (!band || !this._lastSequence || !this._lastSequence.length) return;
     const cellSize = SchemaEditor.cols > 32 ? 10 : SchemaEditor.cols > 20 ? 12 : 14;
     const blocMap = {};
     this.blocs.forEach(b => { blocMap[b.name] = b; });
     band.innerHTML = '';
     band.style.gap = '1px';
-    if (colorRow) { colorRow.innerHTML = ''; colorRow.style.gap = '1px'; }
 
     this._lastSequence.forEach((t, i) => {
       const bloc = blocMap[t];
       if (!bloc) return;
       const bSize = bloc.size || bloc.pattern[0]?.length || 4;
       const color = this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length];
-      const segW = bSize * cellSize + (bSize - 1); // largeur exacte du segment
+      const segW = bSize * cellSize + (bSize - 1);
 
-      // Bande colorée
-      const seg = document.createElement('div');
-      seg.style.cssText = `width:${segW}px; height:14px; background:${color}; border-radius:2px; flex-shrink:0; display:flex; align-items:center; justify-content:center;`;
+      // Conteneur segment : position relative pour superposer l'input
+      const seg = document.createElement('label');
+      seg.title = `Cliquer pour changer la couleur (occurrence ${i + 1} — Bloc ${t})`;
+      seg.style.cssText = `width:${segW}px; height:20px; background:${color}; border-radius:2px; flex-shrink:0; display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative; overflow:hidden;`;
+
+      // Lettre du bloc
       const lbl = document.createElement('span');
-      lbl.style.cssText = 'font-size:9px; font-weight:700; color:#fff; text-shadow:0 0 2px rgba(0,0,0,0.5); line-height:1;';
+      lbl.style.cssText = 'font-size:9px; font-weight:700; color:#fff; text-shadow:0 0 2px rgba(0,0,0,0.6); line-height:1; pointer-events:none; position:relative; z-index:1;';
       lbl.textContent = bloc.name;
       seg.appendChild(lbl);
-      band.appendChild(seg);
 
-      // Sélecteur de couleur sous la grille, aligné sur le bloc
-      if (colorRow) {
-        const wrap = document.createElement('div');
-        wrap.style.cssText = `width:${segW}px; flex-shrink:0; display:flex; align-items:center; justify-content:center;`;
-        const inp = document.createElement('input');
-        inp.type = 'color';
-        inp.value = color;
-        inp.title = `Couleur occurrence ${i + 1} (${bloc.name})`;
-        inp.style.cssText = 'width:100%; height:14px; padding:0; border:none; cursor:pointer; border-radius:2px;';
-        const idx = i;
-        inp.oninput = () => BlocsEnlissage.setOccurrenceColor(idx, inp.value);
-        wrap.appendChild(inp);
-        colorRow.appendChild(wrap);
-      }
+      // Input color transparent superposé sur tout le segment
+      const inp = document.createElement('input');
+      inp.type = 'color';
+      inp.value = color;
+      inp.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; padding:0; border:none;';
+      const idx = i;
+      inp.addEventListener('input', () => {
+        seg.style.background = inp.value;
+        BlocsEnlissage.setOccurrenceColor(idx, inp.value);
+      });
+      seg.appendChild(inp);
+      band.appendChild(seg);
     });
   },
 
@@ -737,7 +736,6 @@ const BlocsEnlissage = {
     SchemaEditor.render();
     SchemaEditor.saveToHiddenField();
     this.renderBand();
-    updateBlocsColorPickers();
     syncOurdissageFromEnlissage(fullSeq, blocMap, this.occurrenceColors, this._defaultColors);
     showToast(`Enlissage rempli : ${totalCols} fils en ${fullSeq.length} blocs.`, 'success');
   }
