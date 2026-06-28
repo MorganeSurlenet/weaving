@@ -18,7 +18,8 @@ const FilsLib = {
       if (!r.ok) { this.fils = []; return; }
       const data = await r.json();
       this.filsSha = data.sha;
-      this.fils = JSON.parse(atob(data.content.replace(/\n/g, '')));
+      const rawFils = atob(data.content.replace(/\n/g, ''));
+      this.fils = JSON.parse(decodeURIComponent(escape(rawFils)));
     } catch(e) {
       console.warn('FilsLib.load error', e);
       this.fils = [];
