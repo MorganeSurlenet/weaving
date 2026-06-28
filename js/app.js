@@ -249,11 +249,19 @@ function renderFicheDetailHTML(f) {
       <tr><td class="row-label">Source d'inspiration</td><td colspan="3">${val(f.source_inspiration)}</td></tr>
       <tr>
         <td class="row-label">Fil de chaîne</td><td>${val(f.fil_chaine)}</td>
-        <td class="row-label">Titrage</td><td>${f.titrage_chaine_val ? `<strong>${f.titrage_chaine_val} ${f.titrage_chaine_sys||'Nm'}</strong> <span style="color:var(--color-text-muted);font-size:0.8em;">(${f.titrage_chaine ? Math.round(f.titrage_chaine).toLocaleString('fr-FR') + ' m/kg' : '—'})</span>` : val(null)}</td>
+        <td class="row-label">Titrage</td><td>${
+          f.titrage_chaine_mode === 'mkg' || f.titrage_chaine_sys === 'mkg'
+            ? (f.titrage_chaine ? `<strong>${Math.round(f.titrage_chaine).toLocaleString('fr-FR')} m/kg</strong>` : val(null))
+            : (f.titrage_chaine_val ? `<strong>${f.titrage_chaine_val} ${f.titrage_chaine_sys||'Nm'}</strong> <span style="color:var(--color-text-muted);font-size:0.8em;">(${f.titrage_chaine ? Math.round(f.titrage_chaine).toLocaleString('fr-FR') + ' m/kg' : '—'})</span>` : val(null))
+        }</td>
       </tr>
       <tr>
         <td class="row-label">Fil de trame</td><td>${val(f.fil_trame)}</td>
-        <td class="row-label">Titrage</td><td>${f.titrage_trame_val ? `<strong>${f.titrage_trame_val} ${f.titrage_trame_sys||'Nm'}</strong> <span style="color:var(--color-text-muted);font-size:0.8em;">(${f.titrage_trame ? Math.round(f.titrage_trame).toLocaleString('fr-FR') + ' m/kg' : '—'})</span>` : val(null)}</td>
+        <td class="row-label">Titrage</td><td>${
+          f.titrage_trame_mode === 'mkg' || f.titrage_trame_sys === 'mkg'
+            ? (f.titrage_trame ? `<strong>${Math.round(f.titrage_trame).toLocaleString('fr-FR')} m/kg</strong>` : val(null))
+            : (f.titrage_trame_val ? `<strong>${f.titrage_trame_val} ${f.titrage_trame_sys||'Nm'}</strong> <span style="color:var(--color-text-muted);font-size:0.8em;">(${f.titrage_trame ? Math.round(f.titrage_trame).toLocaleString('fr-FR') + ' m/kg' : '—'})</span>` : val(null))
+        }</td>
       </tr>
       <tr><td class="row-label">Armure</td><td colspan="3">${val(f.armure)}</td></tr>
       <tr>
@@ -469,12 +477,13 @@ function convertTitrageFromMkg(type) {
   const mkg = parseFloat(directEl.value);
   if (!isNaN(mkg) && mkg > 0) {
     hidEl.value = mkg.toFixed(0);
-    // Stocker aussi la valeur Nm équivalente pour la vue détail
-    if (valEl) valEl.value = (mkg / 1000).toFixed(4);
-    if (sysEl) sysEl.value = 'Nm';
+    // Vider titrage_val pour signaler que la saisie est en m/kg direct
+    if (valEl) valEl.value = '';
+    if (sysEl) sysEl.value = 'mkg';
   } else {
     hidEl.value = '';
     if (valEl) valEl.value = '';
+    if (sysEl) sysEl.value = 'mkg';
   }
   updateFormCalcs();
 }
@@ -620,14 +629,16 @@ function fillForm(f) {
     // Si pas de valeur Nm mais une valeur m/kg directe sauvegardée
     const hasNm  = valEl && valEl.value && valEl.value.trim() !== '';
     const hasMkg = hidEl && hidEl.value && hidEl.value.trim() !== '';
-    if (!hasNm && hasMkg && directEl) {
+    const savedMode = f[`titrage_${type}_mode`] || (f[`titrage_${type}_sys`] === 'mkg' ? 'mkg' : 'nm');
+    const savedDirect = f[`titrage_${type}_mkg_direct`] || '';
+    if ((savedMode === 'mkg' || (!hasNm && hasMkg)) && directEl) {
       // Basculer en mode m/kg
       if (nmZone)  nmZone.style.display  = 'none';
       if (mkgZone) mkgZone.style.display = 'block';
       if (btn)     btn.textContent = 'Saisir en Nm';
       if (label)   label.textContent = 'Titrage (m/kg)';
       if (dispRow) dispRow.style.display = 'none';
-      directEl.value = hidEl.value;
+      directEl.value = savedDirect || (hidEl ? hidEl.value : '');
     } else {
       // Mode Nm par défaut
       if (nmZone)  nmZone.style.display  = 'flex';
@@ -678,6 +689,14 @@ function collectFormData() {
   fields.forEach(field => {
     const el = form.querySelector(`[name="${field}"]`);
     if (el) data[field] = el.value;
+  });
+  // Sauvegarder le mode de saisie titrage (Nm ou mkg) et la valeur m/kg directe
+  ['chaine', 'trame'].forEach(type => {
+    const mkgZone  = document.getElementById(`titrage-${type}-mkg-zone`);
+    const directEl = document.getElementById(`f-titrage-${type}-mkg-direct`);
+    const isMkg = mkgZone && mkgZone.style.display !== 'none';
+    data[`titrage_${type}_mode`] = isMkg ? 'mkg' : 'nm';
+    data[`titrage_${type}_mkg_direct`] = (isMkg && directEl) ? directEl.value : '';
   });
   data.ourdissage = collectOurdissageData();
   data.lisses = collectLissesData();
