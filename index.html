@@ -466,9 +466,11 @@
               <!-- Enlissage : colonne 1, s'étend sur 2 lignes -->
               <div class="draft-zone-enlacement">
                 <div class="draft-label">Enlissage</div>
-                <!-- Bande de blocs colorés au-dessus de la grille -->
-                <div id="blocs-band" style="display:flex; height:14px; gap:1px; margin-bottom:2px;"></div>
-                <div class="draft-grid" id="grid-enlissage"></div>
+                <!-- Bande de blocs colorés au-dessus de la grille (direction rtl = fil 1 à droite) -->
+                <div id="blocs-band" style="display:flex; flex-direction:row-reverse; height:14px; gap:1px; margin-bottom:2px;"></div>
+                <div class="draft-grid" id="grid-enlissage" style="direction:rtl;"></div>
+                <!-- Sélecteurs de couleur par occurrence, alignés sous chaque bloc (même sens) -->
+                <div id="blocs-color-row" style="display:flex; flex-direction:row-reverse; gap:1px; margin-top:3px;"></div>
               </div>
               <!-- Attachage : colonne 2, ligne 1 -->
               <div class="draft-zone-attachage">
