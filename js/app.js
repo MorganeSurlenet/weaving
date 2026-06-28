@@ -111,7 +111,8 @@ async function loadFichesFromGithub() {
   try {
     const data = await githubFetch(`contents/${App.github.filePath}?ref=${App.github.branch}`);
     App.github.fileSha = data.sha;
-    const decoded = atob(data.content.replace(/\n/g, ''));
+    const raw = atob(data.content.replace(/\n/g, ''));
+    const decoded = decodeURIComponent(escape(raw));
     App.fiches = JSON.parse(decoded) || [];
     saveLocal();
     showToast('Fiches chargées depuis GitHub', 'success');
