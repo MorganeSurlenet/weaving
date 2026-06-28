@@ -469,7 +469,7 @@ const BlocsEnlissage = {
   },
 
   // Affiche la bande colorée au-dessus de la grille d'enlissage
-  // Chaque segment contient un input[type=color] de taille réelle mais transparent, avec la lettre par-dessus
+  // Clic sur un segment : popover avec palette des couleurs existantes + picker natif
   renderBand() {
     const band = document.getElementById('blocs-band');
     if (!band || !this._lastSequence || !this._lastSequence.length) return;
@@ -479,6 +479,11 @@ const BlocsEnlissage = {
     band.innerHTML = '';
     band.style.gap = '1px';
 
+    // Collecter les couleurs uniques déjà utilisées dans la séquence
+    const usedColors = [...new Set(
+      this._lastSequence.map((_, i) => this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length])
+    )];
+
     this._lastSequence.forEach((t, i) => {
       const bloc = blocMap[t];
       if (!bloc) return;
@@ -486,32 +491,93 @@ const BlocsEnlissage = {
       const color = this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length];
       const segW = bSize * cellSize + (bSize - 1);
 
-      // Wrapper positionné relatif
       const seg = document.createElement('div');
       seg.title = `Cliquer pour changer la couleur (occurrence ${i + 1} — Bloc ${t})`;
       seg.style.cssText = `width:${segW}px; height:20px; background:${color}; border-radius:2px; flex-shrink:0; position:relative; cursor:pointer;`;
 
-      // Lettre centrée, non-interactive
       const lbl = document.createElement('span');
       lbl.style.cssText = 'position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:#fff; text-shadow:0 0 2px rgba(0,0,0,0.6); pointer-events:none; z-index:1;';
       lbl.textContent = bloc.name;
       seg.appendChild(lbl);
 
-      // Input color pleine taille, transparent, par-dessus
-      const inp = document.createElement('input');
-      inp.type = 'color';
-      inp.value = color;
-      inp.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; opacity:0.001; cursor:pointer; border:none; padding:0; margin:0; z-index:2;';
-      const segRef = seg;
       const idx = i;
-      inp.addEventListener('input', () => {
-        segRef.style.background = inp.value;
-        BlocsEnlissage.setOccurrenceColor(idx, inp.value);
+      seg.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Fermer tout popover existant
+        document.querySelectorAll('._blocs-popover').forEach(p => p.remove());
+
+        const pop = document.createElement('div');
+        pop.className = '_blocs-popover';
+        pop.style.cssText = 'position:fixed; z-index:9999; background:#fff; border:1px solid #ccc; border-radius:6px; padding:8px; box-shadow:0 4px 16px rgba(0,0,0,0.18); display:flex; flex-direction:column; gap:6px; min-width:160px;';
+
+        // Titre
+        const title = document.createElement('div');
+        title.style.cssText = 'font-size:0.75rem; font-weight:600; color:#555; margin-bottom:2px;';
+        title.textContent = `Couleur — Bloc ${t} (occ. ${i + 1})`;
+        pop.appendChild(title);
+
+        // Palette des couleurs déjà utilisées
+        if (usedColors.length > 0) {
+          const palLbl = document.createElement('div');
+          palLbl.style.cssText = 'font-size:0.7rem; color:#888;';
+          palLbl.textContent = 'Couleurs existantes :';
+          pop.appendChild(palLbl);
+
+          const pal = document.createElement('div');
+          pal.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px;';
+          usedColors.forEach(c => {
+            const swatch = document.createElement('div');
+            swatch.style.cssText = `width:22px; height:22px; background:${c}; border-radius:3px; cursor:pointer; border:2px solid ${c === color ? '#333' : 'transparent'}; box-sizing:border-box;`;
+            swatch.title = c;
+            swatch.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              seg.style.background = c;
+              BlocsEnlissage.setOccurrenceColor(idx, c);
+              pop.remove();
+            });
+            pal.appendChild(swatch);
+          });
+          pop.appendChild(pal);
+        }
+
+        // Bouton picker natif
+        const pickerRow = document.createElement('div');
+        pickerRow.style.cssText = 'display:flex; align-items:center; gap:6px; margin-top:2px;';
+        const pickerLbl = document.createElement('label');
+        pickerLbl.style.cssText = 'font-size:0.75rem; color:#555; cursor:pointer; display:flex; align-items:center; gap:4px;';
+        pickerLbl.textContent = 'Autre couleur…';
+        const pickerInp = document.createElement('input');
+        pickerInp.type = 'color';
+        pickerInp.value = color;
+        pickerInp.style.cssText = 'width:28px; height:24px; padding:0; border:none; cursor:pointer; border-radius:3px;';
+        pickerInp.addEventListener('input', () => {
+          seg.style.background = pickerInp.value;
+          BlocsEnlissage.setOccurrenceColor(idx, pickerInp.value);
+        });
+        pickerInp.addEventListener('change', () => { pop.remove(); });
+        pickerLbl.appendChild(pickerInp);
+        pickerRow.appendChild(pickerLbl);
+        pop.appendChild(pickerRow);
+
+        // Positionner le popover sous le segment
+        document.body.appendChild(pop);
+        const rect = seg.getBoundingClientRect();
+        let left = rect.left;
+        let top  = rect.bottom + 4;
+        // Ajuster si dépasse à droite
+        if (left + pop.offsetWidth > window.innerWidth - 8) left = window.innerWidth - pop.offsetWidth - 8;
+        if (top + pop.offsetHeight > window.innerHeight - 8) top = rect.top - pop.offsetHeight - 4;
+        pop.style.left = left + 'px';
+        pop.style.top  = top  + 'px';
       });
-      seg.appendChild(inp);
 
       band.appendChild(seg);
     });
+
+    // Fermer le popover si clic en dehors
+    document.addEventListener('click', () => {
+      document.querySelectorAll('._blocs-popover').forEach(p => p.remove());
+    }, { once: true });
   },
 
   // Construit la map colonne → couleur d'occurrence
