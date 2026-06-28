@@ -428,6 +428,57 @@ function convertTitrage(type) {
   updateFormCalcs();
 }
 
+// Bascule entre le mode saisie Nm et le mode saisie directe m/kg
+function toggleTitrageMode(type) {
+  const nmZone   = document.getElementById(`titrage-${type}-nm-zone`);
+  const mkgZone  = document.getElementById(`titrage-${type}-mkg-zone`);
+  const btn      = document.getElementById(`btn-titrage-mode-${type}`);
+  const label    = document.getElementById(`label-titrage-${type}`);
+  const dispEl   = document.getElementById(`titrage-${type}-mkg`);
+  const dispRow  = dispEl ? dispEl.closest('div') : null;
+  if (!nmZone || !mkgZone) return;
+
+  const isMkgMode = mkgZone.style.display !== 'none';
+  if (isMkgMode) {
+    // Repasser en mode Nm
+    mkgZone.style.display = 'none';
+    nmZone.style.display  = 'flex';
+    btn.textContent = 'Saisir en m/kg';
+    if (label) label.textContent = 'Titrage (Nm)';
+    if (dispRow) dispRow.style.display = '';
+    convertTitrage(type);
+  } else {
+    // Passer en mode m/kg direct
+    nmZone.style.display  = 'none';
+    mkgZone.style.display = 'block';
+    btn.textContent = 'Saisir en Nm';
+    if (label) label.textContent = 'Titrage (m/kg)';
+    // Masquer la ligne "= X m/kg" redondante en mode m/kg
+    if (dispRow) dispRow.style.display = 'none';
+    convertTitrageFromMkg(type);
+  }
+}
+
+// Saisie directe en m/kg : alimente le champ caché titrage_{type}
+function convertTitrageFromMkg(type) {
+  const directEl = document.getElementById(`f-titrage-${type}-mkg-direct`);
+  const hidEl    = document.getElementById(`f-titrage-${type}`);
+  const valEl    = document.getElementById(`f-titrage-${type}-val`);
+  const sysEl    = document.getElementById(`f-titrage-${type}-sys`);
+  if (!directEl || !hidEl) return;
+  const mkg = parseFloat(directEl.value);
+  if (!isNaN(mkg) && mkg > 0) {
+    hidEl.value = mkg.toFixed(0);
+    // Stocker aussi la valeur Nm équivalente pour la vue détail
+    if (valEl) valEl.value = (mkg / 1000).toFixed(4);
+    if (sysEl) sysEl.value = 'Nm';
+  } else {
+    hidEl.value = '';
+    if (valEl) valEl.value = '';
+  }
+  updateFormCalcs();
+}
+
 // ─── CALCULS ────────────────────────────────────────────────
 function n(v) { const x = parseFloat(v); return isNaN(x) ? null : x; }
 
@@ -554,6 +605,38 @@ function fillForm(f) {
   fields.forEach(field => {
     const el = form.querySelector(`[name="${field}"]`);
     if (el && f[field] !== undefined) el.value = f[field];
+  });
+  // Restaurer le mode m/kg si la valeur Nm n'est pas renseignée mais que titrage est présent
+  ['chaine', 'trame'].forEach(type => {
+    const valEl    = document.getElementById(`f-titrage-${type}-val`);
+    const directEl = document.getElementById(`f-titrage-${type}-mkg-direct`);
+    const hidEl    = document.getElementById(`f-titrage-${type}`);
+    const nmZone   = document.getElementById(`titrage-${type}-nm-zone`);
+    const mkgZone  = document.getElementById(`titrage-${type}-mkg-zone`);
+    const btn      = document.getElementById(`btn-titrage-mode-${type}`);
+    const label    = document.getElementById(`label-titrage-${type}`);
+    const dispEl   = document.getElementById(`titrage-${type}-mkg`);
+    const dispRow  = dispEl ? dispEl.closest('div') : null;
+    // Si pas de valeur Nm mais une valeur m/kg directe sauvegardée
+    const hasNm  = valEl && valEl.value && valEl.value.trim() !== '';
+    const hasMkg = hidEl && hidEl.value && hidEl.value.trim() !== '';
+    if (!hasNm && hasMkg && directEl) {
+      // Basculer en mode m/kg
+      if (nmZone)  nmZone.style.display  = 'none';
+      if (mkgZone) mkgZone.style.display = 'block';
+      if (btn)     btn.textContent = 'Saisir en Nm';
+      if (label)   label.textContent = 'Titrage (m/kg)';
+      if (dispRow) dispRow.style.display = 'none';
+      directEl.value = hidEl.value;
+    } else {
+      // Mode Nm par défaut
+      if (nmZone)  nmZone.style.display  = 'flex';
+      if (mkgZone) mkgZone.style.display = 'none';
+      if (btn)     btn.textContent = 'Saisir en m/kg';
+      if (label)   label.textContent = 'Titrage (Nm)';
+      if (dispRow) dispRow.style.display = '';
+      if (directEl) directEl.value = '';
+    }
   });
   // Mettre à jour l'affichage m/kg après chargement
   convertTitrage('chaine');
