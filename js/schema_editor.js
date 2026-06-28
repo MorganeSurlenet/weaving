@@ -387,6 +387,204 @@ function closeSchemaEditor() {
   updateSchemaPreview();
 }
 
+// ─── BLOCS D'ENLISSAGE ──────────────────────────────────────────────────────
+
+// Stockage des blocs définis par l'utilisateur
+// Chaque bloc : { name: 'A', pattern: [[bool, bool, ...], ...] }  (rows=cadres, cols=nb fils du bloc)
+const BlocsEnlissage = {
+  blocs: [],   // [{name, pattern}]
+  _nextName: 65, // code ASCII de 'A'
+
+  // Retourne la lettre suivante disponible
+  _nextLetter() {
+    const used = new Set(this.blocs.map(b => b.name));
+    let code = this._nextName;
+    while (used.has(String.fromCharCode(code))) code++;
+    this._nextName = code + 1;
+    return String.fromCharCode(code);
+  },
+
+  // Ajoute un nouveau bloc vide
+  add() {
+    const name = this._nextLetter();
+    const shafts = SchemaEditor.shafts;
+    const size = 4; // taille par défaut
+    const pattern = Array.from({length: shafts}, () => Array(size).fill(false));
+    this.blocs.push({ name, pattern, size });
+    this.render();
+  },
+
+  // Supprime un bloc par nom
+  remove(name) {
+    this.blocs = this.blocs.filter(b => b.name !== name);
+    this.render();
+  },
+
+  // Bascule une case dans le pattern d'un bloc
+  toggle(name, r, c) {
+    const bloc = this.blocs.find(b => b.name === name);
+    if (!bloc) return;
+    // Règle enlissage : 1 seul cadre par colonne
+    for (let row = 0; row < bloc.pattern.length; row++) bloc.pattern[row][c] = false;
+    bloc.pattern[r][c] = true;
+    this.render();
+  },
+
+  // Redimensionne un bloc (change le nombre de fils)
+  resize(name, newSize) {
+    const bloc = this.blocs.find(b => b.name === name);
+    if (!bloc) return;
+    const shafts = SchemaEditor.shafts;
+    bloc.size = newSize;
+    bloc.pattern = Array.from({length: shafts}, (_, r) =>
+      Array.from({length: newSize}, (_, c) => bloc.pattern[r]?.[c] || false)
+    );
+    this.render();
+  },
+
+  // Rendu de tous les blocs dans #blocs-list
+  render() {
+    const container = document.getElementById('blocs-list');
+    if (!container) return;
+    if (this.blocs.length === 0) {
+      container.innerHTML = '<div style="font-size:0.78rem; color:var(--color-text-muted);">Aucun bloc défini.</div>';
+      return;
+    }
+    container.innerHTML = '';
+    this.blocs.forEach(bloc => {
+      const shafts = bloc.pattern.length;
+      const size   = bloc.size || bloc.pattern[0]?.length || 4;
+      const cellPx = 14;
+
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'display:flex; align-items:flex-start; gap:0.5rem; padding:0.4rem; background:#fff; border:1px solid var(--color-border-light,#e0d8cc); border-radius:4px;';
+
+      // Label + supprimer
+      const labelCol = document.createElement('div');
+      labelCol.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:4px; min-width:28px;';
+      const lbl = document.createElement('strong');
+      lbl.style.cssText = 'font-size:1rem; line-height:1;';
+      lbl.textContent = bloc.name;
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.textContent = '×';
+      delBtn.title = 'Supprimer ce bloc';
+      delBtn.style.cssText = 'background:none; border:none; color:#c0392b; cursor:pointer; font-size:0.9rem; line-height:1; padding:0;';
+      delBtn.onclick = () => this.remove(bloc.name);
+      labelCol.appendChild(lbl);
+      labelCol.appendChild(delBtn);
+      wrap.appendChild(labelCol);
+
+      // Grille du bloc
+      const gridEl = document.createElement('div');
+      gridEl.style.cssText = `display:grid; grid-template-columns:repeat(${size},${cellPx}px); grid-template-rows:repeat(${shafts},${cellPx}px); gap:1px; cursor:crosshair;`;
+      for (let r = 0; r < shafts; r++) {
+        for (let c = 0; c < size; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'schema-cell' + (bloc.pattern[r][c] ? ' filled' : '');
+          cell.title = `Cadre ${r+1}, fil ${c+1}`;
+          const bName = bloc.name, br = r, bc = c;
+          cell.addEventListener('mousedown', e => { e.preventDefault(); this.toggle(bName, br, bc); });
+          gridEl.appendChild(cell);
+        }
+      }
+      wrap.appendChild(gridEl);
+
+      // Taille du bloc
+      const sizeCol = document.createElement('div');
+      sizeCol.style.cssText = 'display:flex; flex-direction:column; gap:4px; font-size:0.75rem;';
+      const sizeLbl = document.createElement('label');
+      sizeLbl.textContent = 'Fils :';
+      const sizeInput = document.createElement('input');
+      sizeInput.type = 'number';
+      sizeInput.value = size;
+      sizeInput.min = 1;
+      sizeInput.max = 32;
+      sizeInput.style.cssText = 'width:42px;';
+      sizeInput.onchange = () => this.resize(bloc.name, Math.max(1, Math.min(32, parseInt(sizeInput.value) || 4)));
+      sizeCol.appendChild(sizeLbl);
+      sizeCol.appendChild(sizeInput);
+      wrap.appendChild(sizeCol);
+
+      container.appendChild(wrap);
+    });
+  },
+
+  // Applique la séquence de blocs à l'enlissage
+  applySequence(sequenceStr, repeat) {
+    if (this.blocs.length === 0) { showToast('Définissez au moins un bloc avant d\'appliquer.', 'error'); return; }
+    const tokens = sequenceStr.trim().toUpperCase().split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) { showToast('Entrez une séquence (ex : A B A B).', 'error'); return; }
+
+    // Vérifier que tous les tokens correspondent à un bloc
+    const blocMap = {};
+    this.blocs.forEach(b => { blocMap[b.name] = b; });
+    for (const t of tokens) {
+      if (!blocMap[t]) { showToast(`Bloc "${t}" non défini.`, 'error'); return; }
+    }
+
+    // Construire la séquence complète
+    const fullSeq = [];
+    for (let i = 0; i < repeat; i++) fullSeq.push(...tokens);
+
+    // Calculer le nombre total de fils nécessaires
+    const totalCols = fullSeq.reduce((s, t) => s + (blocMap[t].size || blocMap[t].pattern[0]?.length || 4), 0);
+    const shafts = SchemaEditor.shafts;
+
+    // Redimensionner l'enlissage si nécessaire
+    if (totalCols !== SchemaEditor.cols) {
+      SchemaEditor.cols = totalCols;
+      const colsInput = document.getElementById('schema-cols');
+      if (colsInput) colsInput.value = totalCols;
+      SchemaEditor.initData(false);
+    }
+
+    // Remplir l'enlissage
+    let col = 0;
+    for (const t of fullSeq) {
+      const bloc = blocMap[t];
+      const bSize = bloc.size || bloc.pattern[0]?.length || 4;
+      for (let c = 0; c < bSize; c++) {
+        for (let r = 0; r < shafts; r++) {
+          SchemaEditor.enlissage[r][col + c] = bloc.pattern[r]?.[c] || false;
+        }
+      }
+      col += bSize;
+    }
+
+    // Ajouter des séparateurs visuels entre blocs (stockés dans schema_data)
+    SchemaEditor._blocSeparators = [];
+    col = 0;
+    for (let i = 0; i < fullSeq.length - 1; i++) {
+      const bloc = blocMap[fullSeq[i]];
+      col += bloc.size || bloc.pattern[0]?.length || 4;
+      SchemaEditor._blocSeparators.push(col);
+    }
+
+    SchemaEditor.render();
+    SchemaEditor.saveToHiddenField();
+    showToast(`Enlissage rempli : ${totalCols} fils en ${fullSeq.length} blocs.`, 'success');
+  }
+};
+
+// Fonctions globales pour le HTML
+function addBlocDefinition() {
+  BlocsEnlissage.add();
+}
+function applyBlocsToEnlissage() {
+  const seq    = document.getElementById('blocs-sequence')?.value || '';
+  const repeat = parseInt(document.getElementById('blocs-repeat')?.value) || 1;
+  BlocsEnlissage.applySequence(seq, repeat);
+}
+function toggleBlocsPanel() {
+  const body = document.getElementById('blocs-enlissage-body');
+  const btn  = document.getElementById('btn-blocs-toggle');
+  if (!body) return;
+  const hidden = body.style.display === 'none';
+  body.style.display = hidden ? '' : 'none';
+  if (btn) btn.textContent = hidden ? 'Masquer' : 'Afficher';
+}
+
 // Mettre à jour l'aperçu lecture seule dans le formulaire
 function updateSchemaPreview() {
   const field = document.getElementById('schema-data');
