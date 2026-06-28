@@ -161,6 +161,9 @@ const SchemaEditor = {
       enlissage: this.enlissage,
       attachage: this.attachage,
       pedalage:  this.pedalage,
+      // Blocs d'enlissage
+      blocs:         BlocsEnlissage.blocs,
+      blocsSequence: BlocsEnlissage._lastSequence || [],
     });
     this.validateSchema();
   },
@@ -257,6 +260,19 @@ const SchemaEditor = {
       this.enlissage  = d.enlissage  || d.enlacement || [];
       this.attachage  = d.attachage  || [];
       this.pedalage   = d.pedalage   || [];
+      // Restaurer les blocs d'enlissage
+      if (d.blocs && d.blocs.length > 0) {
+        BlocsEnlissage.blocs = d.blocs;
+        BlocsEnlissage._lastSequence = d.blocsSequence || [];
+        BlocsEnlissage.render();
+        BlocsEnlissage.renderBand();
+        // Restaurer la séquence dans le champ texte
+        const seqInput = document.getElementById('blocs-sequence');
+        if (seqInput && d.blocsSequence && d.blocsSequence.length > 0) {
+          // Reconstruire la séquence unique (sans les répétitions)
+          seqInput.value = d.blocsSequence.join(' ');
+        }
+      }
       // Sync les inputs
       const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
       setVal('schema-cols',     this.cols);
@@ -536,20 +552,38 @@ const BlocsEnlissage = {
       colorCol.appendChild(colorInput);
       wrap.appendChild(colorCol);
 
-      // Taille du bloc
+      // Taille du bloc — boutons − / valeur / +
       const sizeCol = document.createElement('div');
-      sizeCol.style.cssText = 'display:flex; flex-direction:column; gap:4px; font-size:0.75rem;';
+      sizeCol.style.cssText = 'display:flex; flex-direction:column; gap:4px; font-size:0.75rem; align-items:center;';
       const sizeLbl = document.createElement('label');
-      sizeLbl.textContent = 'Fils :';
-      const sizeInput = document.createElement('input');
-      sizeInput.type = 'number';
-      sizeInput.value = size;
-      sizeInput.min = 1;
-      sizeInput.max = 32;
-      sizeInput.style.cssText = 'width:42px;';
-      sizeInput.onchange = () => this.resize(bloc.name, Math.max(1, Math.min(32, parseInt(sizeInput.value) || 4)));
+      sizeLbl.textContent = 'Fils';
+      const sizeRow = document.createElement('div');
+      sizeRow.style.cssText = 'display:flex; align-items:center; gap:3px;';
+      const btnMinus = document.createElement('button');
+      btnMinus.type = 'button';
+      btnMinus.textContent = '−';
+      btnMinus.style.cssText = 'width:20px; height:20px; padding:0; font-size:0.9rem; line-height:1; cursor:pointer; border:1px solid #ccc; border-radius:3px; background:#f5f5f5;';
+      const sizeVal = document.createElement('span');
+      sizeVal.style.cssText = 'min-width:22px; text-align:center; font-size:0.85rem; font-weight:600;';
+      sizeVal.textContent = size;
+      const btnPlus = document.createElement('button');
+      btnPlus.type = 'button';
+      btnPlus.textContent = '+';
+      btnPlus.style.cssText = 'width:20px; height:20px; padding:0; font-size:0.9rem; line-height:1; cursor:pointer; border:1px solid #ccc; border-radius:3px; background:#f5f5f5;';
+      const bNameSize = bloc.name;
+      btnMinus.onclick = () => {
+        const cur = BlocsEnlissage.blocs.find(b => b.name === bNameSize)?.size || 4;
+        if (cur > 1) { BlocsEnlissage.resize(bNameSize, cur - 1); }
+      };
+      btnPlus.onclick = () => {
+        const cur = BlocsEnlissage.blocs.find(b => b.name === bNameSize)?.size || 4;
+        if (cur < 32) { BlocsEnlissage.resize(bNameSize, cur + 1); }
+      };
+      sizeRow.appendChild(btnMinus);
+      sizeRow.appendChild(sizeVal);
+      sizeRow.appendChild(btnPlus);
       sizeCol.appendChild(sizeLbl);
-      sizeCol.appendChild(sizeInput);
+      sizeCol.appendChild(sizeRow);
       wrap.appendChild(sizeCol);
 
       container.appendChild(wrap);
