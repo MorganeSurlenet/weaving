@@ -348,7 +348,10 @@ function renderOurdissageDetail(ourdissage) {
     <tbody>
       ${ourdissage.map(row => `
         <tr>
-          <td class="color-label">${row.couleur || ''}</td>
+          <td class="color-label" style="white-space:nowrap;">
+            ${row.hex && row.hex !== '#cccccc' ? `<span style="display:inline-block; width:14px; height:14px; background:${row.hex}; border-radius:2px; margin-right:4px; vertical-align:middle;"></span>` : ''}
+            ${row.couleur || ''}
+          </td>
           ${Array.from({length: cols}, (_, i) => `<td>${row.sequence?.[i] || ''}</td>`).join('')}
           <td><strong>${row.total || ''}</strong></td>
         </tr>`).join('')}
@@ -747,35 +750,75 @@ async function deleteFiche() {
 // ─── TABLEAU OURDISSAGE (formulaire) ────────────────────────
 const NB_OURDISSAGE_COLS = 16;
 
+// Crée une ligne du tableau d'ourdissage
+function _makeOurdissageRow(row, ri) {
+  const couleur = row.couleur || '';
+  const hex     = row.hex     || '#cccccc';
+  const seq     = row.sequence || [];
+  // Calcul auto du total : somme des valeurs numériques de la séquence
+  const autoTotal = seq.reduce((s, v) => s + (parseFloat(v) || 0), 0);
+  const total = row.total !== undefined && row.total !== '' ? row.total : (autoTotal > 0 ? autoTotal : '');
+  return `<tr>
+    <td style="white-space:nowrap; display:flex; align-items:center; gap:4px; border:none; padding:2px 4px;">
+      <input type="color" value="${hex}" style="width:26px; height:26px; padding:0; border:none; cursor:pointer; flex-shrink:0;" title="Couleur">
+      <input type="text" value="${couleur}" placeholder="Couleur ${ri+1}" style="width:80px;">
+    </td>
+    ${Array.from({length: NB_OURDISSAGE_COLS}, (_, ci) =>
+      `<td><input type="text" value="${seq[ci] || ''}" style="width:28px;" oninput="_updateOurdissageTotal(this)"></td>`
+    ).join('')}
+    <td><input type="number" value="${total}" style="width:50px; font-weight:600;" placeholder="=" readonly title="Total calculé automatiquement"></td>
+    <td style="border:none; padding:2px;"><button type="button" onclick="_removeOurdissageRow(this)" style="background:none; border:none; color:#c0392b; cursor:pointer; font-size:1rem; line-height:1;" title="Supprimer cette ligne">×</button></td>
+  </tr>`;
+}
+
+// Met à jour le total de la ligne quand une cellule change
+function _updateOurdissageTotal(inputEl) {
+  const tr = inputEl.closest('tr');
+  if (!tr) return;
+  const seqInputs = Array.from(tr.querySelectorAll('td:not(:first-child):not(:last-child):not(:nth-last-child(2)) input'));
+  const sum = seqInputs.reduce((s, el) => s + (parseFloat(el.value) || 0), 0);
+  const totalInput = tr.querySelector('td:nth-last-child(2) input');
+  if (totalInput) totalInput.value = sum > 0 ? sum : '';
+}
+
+// Supprime une ligne du tableau d'ourdissage
+function _removeOurdissageRow(btn) {
+  const tr = btn.closest('tr');
+  if (tr) tr.remove();
+}
+
+// Ajoute une ligne vide au tableau d'ourdissage
+function addOurdissageRow() {
+  const tbody = document.getElementById('ourdissage-tbody');
+  if (!tbody) return;
+  const ri = tbody.rows.length;
+  const div = document.createElement('tbody');
+  div.innerHTML = _makeOurdissageRow({ couleur: '', hex: '#cccccc', sequence: [], total: '' }, ri);
+  tbody.appendChild(div.firstElementChild);
+}
+
 function initOurdissageForm(data) {
   const tbody = document.getElementById('ourdissage-tbody');
   const defaultRows = [
-    { couleur: 'Couleur 1', sequence: [], total: '' },
-    { couleur: 'Couleur 2', sequence: [], total: '' },
-    { couleur: 'Couleur 3', sequence: [], total: '' },
-    { couleur: '', sequence: [], total: '' },
-    { couleur: '', sequence: [], total: '' },
-    { couleur: '', sequence: [], total: '' }
+    { couleur: 'Couleur 1', hex: '#cccccc', sequence: [], total: '' },
+    { couleur: 'Couleur 2', hex: '#cccccc', sequence: [], total: '' },
+    { couleur: 'Couleur 3', hex: '#cccccc', sequence: [], total: '' },
   ];
   const rows = data.length > 0 ? data : defaultRows;
-  tbody.innerHTML = rows.map((row, ri) => `
-    <tr>
-      <td><input type="text" value="${row.couleur || ''}" placeholder="Couleur ${ri+1}" style="width:90px"></td>
-      ${Array.from({length: NB_OURDISSAGE_COLS}, (_, ci) =>
-        `<td><input type="text" value="${row.sequence?.[ci] || ''}" style="width:28px"></td>`
-      ).join('')}
-      <td><input type="number" value="${row.total || ''}" style="width:50px" placeholder="="></td>
-    </tr>`).join('');
+  tbody.innerHTML = rows.map((row, ri) => _makeOurdissageRow(row, ri)).join('');
 }
 
 function collectOurdissageData() {
   const rows = $$('#ourdissage-tbody tr');
   return rows.map(tr => {
-    const inputs = $$('input', tr);
-    const couleur = inputs[0].value;
-    const sequence = Array.from({length: NB_OURDISSAGE_COLS}, (_, i) => inputs[i+1].value);
-    const total = inputs[NB_OURDISSAGE_COLS + 1].value;
-    return { couleur, sequence, total };
+    const allInputs = $$('input', tr);
+    // allInputs[0] = color picker (type=color), allInputs[1] = nom couleur,
+    // allInputs[2..17] = séquence, allInputs[18] = total
+    const hex      = allInputs[0] ? allInputs[0].value : '#cccccc';
+    const couleur  = allInputs[1] ? allInputs[1].value : '';
+    const sequence = Array.from({length: NB_OURDISSAGE_COLS}, (_, i) => allInputs[i + 2] ? allInputs[i + 2].value : '');
+    const total    = allInputs[NB_OURDISSAGE_COLS + 2] ? allInputs[NB_OURDISSAGE_COLS + 2].value : '';
+    return { hex, couleur, sequence, total };
   }).filter(r => r.couleur || r.sequence.some(v => v) || r.total);
 }
 
