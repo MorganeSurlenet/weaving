@@ -526,10 +526,16 @@ function resetForm() {
   // Réinitialiser les tableaux dynamiques
   initOurdissageForm([]);
   initLissesForm({});
-  // Réinitialiser l'éditeur de schéma
-  if (typeof SchemaEditor !== 'undefined') {
-    SchemaEditor.init();
-  }
+  // Réinitialiser le schéma : fermer l'éditeur et vider l'aperçu
+  const editorZone  = document.getElementById('schema-editor-zone');
+  const previewZone = document.getElementById('schema-preview-zone');
+  const btn         = document.getElementById('btn-edit-schema');
+  if (editorZone)  editorZone.style.display  = 'none';
+  if (previewZone) previewZone.style.display = 'block';
+  if (btn)         btn.textContent = 'Modifier le schéma';
+  const schemaField = document.getElementById('schema-data');
+  if (schemaField) schemaField.value = '';
+  if (typeof updateSchemaPreview === 'function') updateSchemaPreview();
   updateFormCalcs();
 }
 
@@ -554,14 +560,22 @@ function fillForm(f) {
   convertTitrage('trame');
   initOurdissageForm(f.ourdissage || []);
   initLissesForm(f.lisses || {});
-  // Charger le schéma interactif
-  if (typeof SchemaEditor !== 'undefined') {
-    if (f.schema_data) {
-      SchemaEditor.loadFromData(f.schema_data);
-    } else {
-      SchemaEditor.init();
-    }
+  // Charger le schéma : fermer l'éditeur, afficher l'aperçu
+  const editorZone2  = document.getElementById('schema-editor-zone');
+  const previewZone2 = document.getElementById('schema-preview-zone');
+  const btn2         = document.getElementById('btn-edit-schema');
+  if (editorZone2)  editorZone2.style.display  = 'none';
+  if (previewZone2) previewZone2.style.display = 'block';
+  if (btn2)         btn2.textContent = 'Modifier le schéma';
+  const schemaField2 = document.getElementById('schema-data');
+  if (schemaField2 && f.schema_data) {
+    schemaField2.value = typeof f.schema_data === 'string' ? f.schema_data : JSON.stringify(f.schema_data);
+    // Pré-charger les données dans SchemaEditor pour édition ultérieure
+    if (typeof SchemaEditor !== 'undefined') SchemaEditor.loadFromData(f.schema_data);
+  } else if (schemaField2) {
+    schemaField2.value = '';
   }
+  if (typeof updateSchemaPreview === 'function') updateSchemaPreview();
   updateFormCalcs();
 }
 
