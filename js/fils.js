@@ -235,3 +235,47 @@ function applyFilToForm(type) {
 
   showToast(`Fil "${[fil.marque, fil.reference].filter(Boolean).join(' ')}" appliqué`);
 }
+
+// ── Créer un nouveau fil directement depuis la fiche technique ────────────────
+let _filFromFicheTarget = null; // 'chaine' ou 'trame'
+
+function openNewFilFromFiche(type) {
+  _filFromFicheTarget = type;
+  openNewFilModal();
+}
+
+// Surcharge de saveFilModal pour gérer le retour vers la fiche
+const _origSaveFilModal = saveFilModal;
+saveFilModal = async function() {
+  const id = document.getElementById('fil-id').value;
+  const fil = {
+    marque:    document.getElementById('fil-marque').value.trim(),
+    reference: document.getElementById('fil-reference').value.trim(),
+    matiere:   document.getElementById('fil-matiere').value.trim(),
+    coloris:   document.getElementById('fil-coloris').value.trim(),
+    couleur:   document.getElementById('fil-couleur').value,
+    nm:        document.getElementById('fil-nm').value.trim(),
+    prix_kg:   parseFloat(document.getElementById('fil-prix-kg').value) || 0,
+    notes:     document.getElementById('fil-notes').value.trim(),
+  };
+  if (!fil.marque && !fil.reference) { showToast('Renseignez au moins la marque ou la référence', 'error'); return; }
+  let newId;
+  if (id) { FilsLib.update(id, fil); newId = id; }
+  else { newId = FilsLib.add(fil); }
+  const ok = await FilsLib.save();
+  if (ok) {
+    showToast('Fil sauvegardé !');
+    closeFilModal();
+    renderFilsView();
+    refreshFilsSelects();
+    // Si ouvert depuis la fiche, sélectionner et appliquer automatiquement
+    if (_filFromFicheTarget) {
+      const sel = document.getElementById(`fil-select-${_filFromFicheTarget}`);
+      if (sel) {
+        sel.value = newId;
+        applyFilToForm(_filFromFicheTarget);
+      }
+      _filFromFicheTarget = null;
+    }
+  }
+};
