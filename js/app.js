@@ -810,7 +810,7 @@ function syncOurdissageFromEnlissage(fullSeq, blocMap, occurrenceColors, default
   // Colonnes indexées de droite à gauche : groupe 0 = colonne la plus à droite
   const colorMap = {}; // hex -> { couleur, hex, sequence[] }
   groups.forEach((g, gi) => {
-    const colIdx = gi; // gauche à droite : groupe 0 = colonne 0
+    const colIdx = gi; // gauche à droite : groupe 0 = colonne 0 (inverse de l'enlissage)
     if (!colorMap[g.color]) {
       colorMap[g.color] = {
         couleur: g.label,
