@@ -829,6 +829,16 @@ textarea { resize: vertical; min-height: 80px; }
   gap: 0.35rem;
   flex-shrink: 0;
 }
+.fil-card-lien {
+  display: inline-block;
+  font-size: 0.75rem;
+  color: var(--color-primary);
+  text-decoration: none;
+  margin-top: 3px;
+}
+.fil-card-lien:hover {
+  text-decoration: underline;
+}
 
 /* ===== RESPONSIVE ===== */
 @media (max-width: 640px) {
