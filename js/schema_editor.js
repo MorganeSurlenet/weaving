@@ -51,6 +51,7 @@ const SchemaEditor = {
   render() {
     // Enlissage : cadres × fils
     this._renderGrid('grid-enlissage', this.enlissage, this.shafts, this.cols,     'enlissage');
+    BlocsEnlissage._applyColorsToGrid();
     // Attachage : cadres × pédales
     this._renderGrid('grid-attachage',  this.attachage,  this.shafts, this.treadles, 'attachage');
     // Pédalage : duites × pédales
@@ -147,6 +148,7 @@ const SchemaEditor = {
     const cols = gridName === 'enlissage'  ? this.cols :
                  gridName === 'attachage'  ? this.treadles : this.treadles;
     this._renderGrid(containerId, data, rows, cols, gridName);
+    if (gridName === 'enlissage') BlocsEnlissage._applyColorsToGrid();
     this.saveToHiddenField();
   },
 
@@ -162,8 +164,9 @@ const SchemaEditor = {
       attachage: this.attachage,
       pedalage:  this.pedalage,
       // Blocs d'enlissage
-      blocs:         BlocsEnlissage.blocs,
-      blocsSequence: BlocsEnlissage._lastSequence || [],
+      blocs:            BlocsEnlissage.blocs,
+      blocsSequence:    BlocsEnlissage._lastSequence || [],
+      blocsColors:      BlocsEnlissage.occurrenceColors || [],
     });
     this.validateSchema();
   },
@@ -264,14 +267,16 @@ const SchemaEditor = {
       if (d.blocs && d.blocs.length > 0) {
         BlocsEnlissage.blocs = d.blocs;
         BlocsEnlissage._lastSequence = d.blocsSequence || [];
+        BlocsEnlissage.occurrenceColors = d.blocsColors || [];
         BlocsEnlissage.render();
         BlocsEnlissage.renderBand();
         // Restaurer la séquence dans le champ texte
         const seqInput = document.getElementById('blocs-sequence');
         if (seqInput && d.blocsSequence && d.blocsSequence.length > 0) {
-          // Reconstruire la séquence unique (sans les répétitions)
           seqInput.value = d.blocsSequence.join(' ');
         }
+        // Mettre à jour les color pickers
+        updateBlocsColorPickers();
       }
       // Sync les inputs
       const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
@@ -306,7 +311,7 @@ const SchemaEditor = {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    const makeReadOnlyGrid = (parentEl, label, gridData, rows, cols) => {
+    const makeReadOnlyGrid = (parentEl, label, gridData, rows, cols, colColorMap) => {
       const zone = document.createElement('div');
       zone.className = 'draft-zone-readonly';
       const lbl = document.createElement('div');
@@ -324,7 +329,12 @@ const SchemaEditor = {
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           const cell = document.createElement('div');
-          cell.className = 'schema-cell-ro' + (gridData?.[r]?.[c] ? ' filled' : '');
+          const filled = gridData?.[r]?.[c];
+          cell.className = 'schema-cell-ro' + (filled ? ' filled' : '');
+          if (filled && colColorMap && colColorMap[c]) {
+            cell.style.background = colColorMap[c];
+            cell.style.borderColor = colColorMap[c];
+          }
           grid.appendChild(cell);
         }
       }
@@ -335,12 +345,28 @@ const SchemaEditor = {
     container.innerHTML = '';
     container.className = 'draft-container draft-readonly-wrapper';
 
+    // Construire la map colonne → couleur depuis les données sauvegardées
+    const roColMap = {};
+    if (d.blocsSequence && d.blocsSequence.length && d.blocs && d.blocsColors) {
+      const blocMap = {};
+      d.blocs.forEach(b => { blocMap[b.name] = b; });
+      let col = 0;
+      d.blocsSequence.forEach((t, i) => {
+        const bloc = blocMap[t];
+        if (!bloc) return;
+        const bSize = bloc.size || bloc.pattern?.[0]?.length || 4;
+        const color = d.blocsColors[i];
+        if (color) for (let c = 0; c < bSize; c++) roColMap[col + c] = color;
+        col += bSize;
+      });
+    }
+
     // Enlissage : colonne 1
     const zoneEnl = document.createElement('div');
     zoneEnl.className = 'draft-zone-enlacement';
     // Compatibilité ascendante
     const enlData = d.enlissage || d.enlacement;
-    makeReadOnlyGrid(zoneEnl, 'Enlissage', enlData, d.shafts, d.cols);
+    makeReadOnlyGrid(zoneEnl, 'Enlissage', enlData, d.shafts, d.cols, roColMap);
     container.appendChild(zoneEnl);
 
     // Attachage : colonne 2, ligne 1
@@ -419,47 +445,92 @@ const BlocsEnlissage = {
     return String.fromCharCode(code);
   },
 
-  // Couleurs par défaut pour les premiers blocs
+  // Couleurs par défaut pour les occurrences
   _defaultColors: ['#4a90d9','#e67e22','#27ae60','#8e44ad','#c0392b','#16a085','#f39c12','#2c3e50'],
 
-  // Ajoute un nouveau bloc vide
+  // Couleurs par occurrence dans la séquence complète (index = position dans fullSeq)
+  occurrenceColors: [],
+
+  // Ajoute un nouveau bloc vide (sans couleur propre)
   add() {
     const name = this._nextLetter();
     const shafts = SchemaEditor.shafts;
     const size = 4;
     const pattern = Array.from({length: shafts}, () => Array(size).fill(false));
-    const colorIdx = this.blocs.length % this._defaultColors.length;
-    this.blocs.push({ name, pattern, size, color: this._defaultColors[colorIdx] });
+    this.blocs.push({ name, pattern, size });
     this.render();
   },
 
-  // Met à jour la couleur d'un bloc
-  setColor(name, color) {
-    const bloc = this.blocs.find(b => b.name === name);
-    if (bloc) { bloc.color = color; this.renderBand(); }
+  // Met à jour la couleur d'une occurrence
+  setOccurrenceColor(idx, color) {
+    this.occurrenceColors[idx] = color;
+    this._applyColorsToGrid();
+    this.renderBand();
   },
 
   // Affiche la bande colorée au-dessus de la grille d'enlissage
   renderBand() {
     const band = document.getElementById('blocs-band');
-    if (!band || !this._lastSequence) return;
+    if (!band || !this._lastSequence || !this._lastSequence.length) return;
     const cellSize = SchemaEditor.cols > 32 ? 10 : SchemaEditor.cols > 20 ? 12 : 14;
     const blocMap = {};
     this.blocs.forEach(b => { blocMap[b.name] = b; });
     band.innerHTML = '';
     band.style.gap = '1px';
-    for (const t of this._lastSequence) {
+    this._lastSequence.forEach((t, i) => {
       const bloc = blocMap[t];
-      if (!bloc) continue;
+      if (!bloc) return;
       const bSize = bloc.size || bloc.pattern[0]?.length || 4;
+      const color = this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length];
       const seg = document.createElement('div');
-      seg.style.cssText = `width:${bSize * cellSize + (bSize - 1)}px; height:14px; background:${bloc.color || '#ccc'}; border-radius:2px; flex-shrink:0; display:flex; align-items:center; justify-content:center;`;
+      seg.style.cssText = `width:${bSize * cellSize + (bSize - 1)}px; height:14px; background:${color}; border-radius:2px; flex-shrink:0; display:flex; align-items:center; justify-content:center;`;
       const lbl = document.createElement('span');
       lbl.style.cssText = 'font-size:9px; font-weight:700; color:#fff; text-shadow:0 0 2px rgba(0,0,0,0.5); line-height:1;';
       lbl.textContent = bloc.name;
       seg.appendChild(lbl);
       band.appendChild(seg);
-    }
+    });
+  },
+
+  // Construit la map colonne → couleur d'occurrence
+  _buildColMap() {
+    if (!this._lastSequence || !this._lastSequence.length) return {};
+    const blocMap = {};
+    this.blocs.forEach(b => { blocMap[b.name] = b; });
+    const map = {}; // col index → color
+    let col = 0;
+    this._lastSequence.forEach((t, i) => {
+      const bloc = blocMap[t];
+      if (!bloc) return;
+      const bSize = bloc.size || bloc.pattern[0]?.length || 4;
+      const color = this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length];
+      for (let c = 0; c < bSize; c++) map[col + c] = color;
+      col += bSize;
+    });
+    return map;
+  },
+
+  // Applique les couleurs d'occurrences aux cellules de la grille d'enlissage
+  _applyColorsToGrid() {
+    const container = document.getElementById('grid-enlissage');
+    if (!container) return;
+    const colMap = this._buildColMap();
+    const cells = container.querySelectorAll('.schema-cell');
+    const cols = SchemaEditor.cols;
+    cells.forEach(cell => {
+      const c = parseInt(cell.dataset.c);
+      const isFilled = cell.classList.contains('filled');
+      if (isFilled && colMap[c]) {
+        cell.style.background = colMap[c];
+        cell.style.borderColor = colMap[c];
+      } else if (isFilled) {
+        cell.style.background = '';
+        cell.style.borderColor = '';
+      } else {
+        cell.style.background = '';
+        cell.style.borderColor = '';
+      }
+    });
   },
 
   // Supprime un bloc par nom
@@ -538,20 +609,6 @@ const BlocsEnlissage = {
       }
       wrap.appendChild(gridEl);
 
-      // Couleur du bloc
-      const colorCol = document.createElement('div');
-      colorCol.style.cssText = 'display:flex; flex-direction:column; gap:4px; font-size:0.75rem; align-items:center;';
-      const colorLbl = document.createElement('label');
-      colorLbl.textContent = 'Couleur';
-      const colorInput = document.createElement('input');
-      colorInput.type = 'color';
-      colorInput.value = bloc.color || '#4a90d9';
-      colorInput.style.cssText = 'width:32px; height:24px; padding:0; border:none; cursor:pointer;';
-      colorInput.oninput = () => this.setColor(bloc.name, colorInput.value);
-      colorCol.appendChild(colorLbl);
-      colorCol.appendChild(colorInput);
-      wrap.appendChild(colorCol);
-
       // Taille du bloc — boutons − / valeur / +
       const sizeCol = document.createElement('div');
       sizeCol.style.cssText = 'display:flex; flex-direction:column; gap:4px; font-size:0.75rem; align-items:center;';
@@ -607,6 +664,14 @@ const BlocsEnlissage = {
     const fullSeq = [];
     for (let i = 0; i < repeat; i++) fullSeq.push(...tokens);
     this._lastSequence = fullSeq; // mémoriser pour renderBand
+    // Initialiser les couleurs d'occurrences manquantes avec les couleurs par défaut
+    for (let i = 0; i < fullSeq.length; i++) {
+      if (!this.occurrenceColors[i]) {
+        this.occurrenceColors[i] = this._defaultColors[i % this._defaultColors.length];
+      }
+    }
+    // Tronquer si la séquence est plus courte
+    this.occurrenceColors = this.occurrenceColors.slice(0, fullSeq.length);
 
     // Calculer le nombre total de fils nécessaires
     const totalCols = fullSeq.reduce((s, t) => s + (blocMap[t].size || blocMap[t].pattern[0]?.length || 4), 0);
@@ -651,6 +716,7 @@ const BlocsEnlissage = {
     SchemaEditor.render();
     SchemaEditor.saveToHiddenField();
     this.renderBand();
+    updateBlocsColorPickers();
     showToast(`Enlissage rempli : ${totalCols} fils en ${fullSeq.length} blocs.`, 'success');
   }
 };
@@ -664,6 +730,38 @@ function applyBlocsToEnlissage() {
   const repeat = parseInt(document.getElementById('blocs-repeat')?.value) || 1;
   BlocsEnlissage.applySequence(seq, repeat);
 }
+
+// Génère les color pickers pour chaque occurrence dans la séquence
+function updateBlocsColorPickers() {
+  const container = document.getElementById('blocs-color-pickers');
+  if (!container) return;
+  const seqStr = document.getElementById('blocs-sequence')?.value || '';
+  const repeat = parseInt(document.getElementById('blocs-repeat')?.value) || 1;
+  const tokens = seqStr.trim().toUpperCase().split(/\s+/).filter(Boolean);
+  const fullSeq = [];
+  for (let i = 0; i < repeat; i++) fullSeq.push(...tokens);
+
+  if (fullSeq.length === 0) { container.innerHTML = ''; return; }
+
+  container.innerHTML = '';
+  fullSeq.forEach((t, i) => {
+    const currentColor = BlocsEnlissage.occurrenceColors[i] || BlocsEnlissage._defaultColors[i % BlocsEnlissage._defaultColors.length];
+    const wrap = document.createElement('label');
+    wrap.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:2px; font-size:0.7rem; cursor:pointer;';
+    const lbl = document.createElement('span');
+    lbl.textContent = `${i + 1}. ${t}`;
+    lbl.style.fontWeight = '600';
+    const inp = document.createElement('input');
+    inp.type = 'color';
+    inp.value = currentColor;
+    inp.style.cssText = 'width:28px; height:22px; padding:0; border:none; cursor:pointer;';
+    inp.oninput = () => BlocsEnlissage.setOccurrenceColor(i, inp.value);
+    wrap.appendChild(lbl);
+    wrap.appendChild(inp);
+    container.appendChild(wrap);
+  });
+}
+
 function toggleBlocsPanel() {
   const body = document.getElementById('blocs-enlissage-body');
   const btn  = document.getElementById('btn-blocs-toggle');
