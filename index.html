@@ -448,11 +448,13 @@
                 <div style="margin-top:0.6rem; border-top:1px solid var(--color-border-light,#e0d8cc); padding-top:0.5rem;">
                   <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.3rem;">Séquence de répétition :</label>
                   <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
-                    <input type="text" id="blocs-sequence" placeholder="Ex : A B A B ou A A B A A B" style="flex:1; min-width:140px; font-family:monospace;">
-                    <input type="number" id="blocs-repeat" value="1" min="1" max="50" style="width:55px;" title="Nombre de fois que la séquence est répétée">
+                    <input type="text" id="blocs-sequence" placeholder="Ex : A B A B ou A A B A A B" style="flex:1; min-width:140px; font-family:monospace;" oninput="updateBlocsColorPickers()">
+                    <input type="number" id="blocs-repeat" value="1" min="1" max="50" style="width:55px;" title="Nombre de fois que la séquence est répétée" oninput="updateBlocsColorPickers()">
                     <span style="font-size:0.78rem; color:var(--color-text-muted);">répétition(s)</span>
                     <button type="button" class="btn btn-sm btn-primary" onclick="applyBlocsToEnlissage()">Appliquer</button>
                   </div>
+                  <!-- Couleurs par position dans la séquence -->
+                  <div id="blocs-color-pickers" style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.5rem;"></div>
                   <div style="font-size:0.75rem; color:var(--color-text-muted); margin-top:0.3rem;">Le résultat écrase l'enlissage actuel. Ajustez ensuite manuellement si besoin.</div>
                 </div>
               </div>
