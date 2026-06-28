@@ -3,16 +3,16 @@
     "id": "mqxi44f8immm5",
     "date_creation": "2026-06-28T08:02:40.100Z",
     "projet": "Premier tissage - 8 sets de 40*60 cm Betty Briand",
-    "source_inspiration": "SÃ©rie de sergÃ© avec variations d'attachages",
-    "fil_chaine": "Lin/coton flammÃ©",
+    "source_inspiration": "SÃÂ©rie de sergÃÂ© avec variations d'attachages",
+    "fil_chaine": "Lin/coton flammÃÂ©",
     "titrage_chaine_val": "5.6000",
     "titrage_chaine_sys": "Nm",
     "titrage_chaine": "5600",
-    "fil_trame": "Lin/coton flammÃ©",
+    "fil_trame": "Lin/coton flammÃÂ©",
     "titrage_trame_val": "5.6000",
     "titrage_trame_sys": "Nm",
     "titrage_trame": "5600",
-    "armure": "SergÃ©",
+    "armure": "SergÃÂ©",
     "densite_chaine": "8",
     "densite_trame": "8",
     "peigne_dents": "4",
@@ -30,10 +30,32 @@
     "notes": "",
     "ourdissage": [
       {
-        "couleur": "Couleur 1",
+        "couleur": "Bleu acier",
+        "sequence": [
+          "12",
+          "",
+          "12",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "total": ""
+      },
+      {
+        "couleur": "Bleu ciel",
         "sequence": [
           "",
-          "",
+          "36",
           "",
           "",
           "",
@@ -52,34 +74,12 @@
         "total": ""
       },
       {
-        "couleur": "Couleur 2",
+        "couleur": "Rose",
         "sequence": [
           "",
           "",
           "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          ""
-        ],
-        "total": ""
-      },
-      {
-        "couleur": "Couleur 3",
-        "sequence": [
-          "",
-          "",
-          "",
-          "",
+          "12",
           "",
           "",
           "",
@@ -181,6 +181,10 @@
     },
     "schema_data": "{\"cols\":60,\"rows\":16,\"shafts\":4,\"treadles\":6,\"enlissage\":[[true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false],[false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false],[false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false],[false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true]],\"attachage\":[[false,true,false,false,true,false],[false,true,true,false,false,true],[true,false,true,true,true,false],[true,false,false,true,true,false]],\"pedalage\":[[true,false,false,false,false,false],[false,true,false,false,false,false],[false,false,true,false,false,false],[false,false,false,true,false,false],[false,false,false,false,true,false],[false,false,false,false,false,true],[false,false,false,false,true,false],[false,false,false,true,false,false],[false,false,true,false,false,false],[false,true,false,false,false,false],[true,false,false,false,false,false],[false,false,false,false,false,false],[false,false,false,false,false,false],[false,false,false,false,false,false],[false,false,false,false,false,false],[false,false,false,false,false,false]]}",
     "schema_image": "",
-    "date_modification": "2026-06-28T08:12:05.199Z"
+    "date_modification": "2026-06-28T08:16:53.773Z",
+    "titrage_chaine_mode": "nm",
+    "titrage_chaine_mkg_direct": "",
+    "titrage_trame_mode": "nm",
+    "titrage_trame_mkg_direct": ""
   }
 ]
