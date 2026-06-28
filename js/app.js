@@ -318,6 +318,9 @@ function renderFicheDetailHTML(f) {
     </table>
   </div>
 
+  <!-- Récapitulatif matières par couleur -->
+  ${renderRecapMatieres(f)}
+
   <!-- Tableau ourdissage -->
   <div class="fiche-section">
     <div class="fiche-section-title">Tableau d'ourdissage des fils de chaîne</div>
@@ -335,6 +338,101 @@ function renderFicheDetailHTML(f) {
     <div class="fiche-section-title">Schéma d'enlissage, d'attachage et de pédalage</div>
     <div id="schema-readonly-container"></div>
     ${f.notes ? `<div style="margin-top:1rem; padding:0.75rem; background:var(--color-accent-bg); border-radius:4px; font-size:0.875rem;"><strong>Notes :</strong> ${f.notes}</div>` : ''}
+  </div>`;
+}
+
+// ─── RÉCAPITULATIF MATIÈRES PAR COULEUR ────────────────────────────────────
+function calcRecapMatieres(f) {
+  const recap = []; // { couleur, hex, usage, nbFils, longTotale_m, poids_g }
+
+  // ── Chaîne : depuis le tableau d'ourdissage ──
+  const longChaine = calcLongChaineTotale(f); // en mètres
+  const mkg_chaine = f.titrage_chaine ? parseFloat(f.titrage_chaine) : null;
+  if (f.ourdissage && f.ourdissage.length > 0 && longChaine) {
+    f.ourdissage.forEach(row => {
+      const total = parseInt(row.total) || (row.sequence || []).reduce((s, v) => s + (parseInt(v) || 0), 0);
+      if (!total) return;
+      const longTotale = total * longChaine;
+      const poids_g = mkg_chaine ? (longTotale / mkg_chaine) * 1000 : null;
+      recap.push({
+        couleur: row.couleur || '',
+        hex: row.hex || '',
+        usage: 'Chaîne',
+        nbFils: total,
+        longTotale_m: longTotale,
+        poids_g
+      });
+    });
+  }
+
+  // ── Trame : depuis les couleurs de trame du schéma ──
+  const larg_peigne = calcLargPeigne(f); // en cm
+  const mkg_trame = f.titrage_trame ? parseFloat(f.titrage_trame) : null;
+  if (f.schema_data) {
+    try {
+      const sd = typeof f.schema_data === 'string' ? JSON.parse(f.schema_data) : f.schema_data;
+      if (sd.trameColors && sd.trameColors.length > 0 && larg_peigne) {
+        // Regrouper les duites consécutives de même couleur
+        const groups = [];
+        sd.trameColors.forEach(c => {
+          const last = groups[groups.length - 1];
+          if (last && last.hex === c) { last.count++; }
+          else { groups.push({ hex: c, count: 1 }); }
+        });
+        // Agréger par couleur unique
+        const colorMap = {};
+        groups.forEach(g => {
+          if (!colorMap[g.hex]) colorMap[g.hex] = { hex: g.hex, count: 0 };
+          colorMap[g.hex].count += g.count;
+        });
+        Object.values(colorMap).forEach(g => {
+          const longTotale = g.count * (larg_peigne / 100); // cm → m
+          const poids_g = mkg_trame ? (longTotale / mkg_trame) * 1000 : null;
+          recap.push({
+            couleur: '',
+            hex: g.hex,
+            usage: 'Trame',
+            nbFils: g.count + ' duites',
+            longTotale_m: longTotale,
+            poids_g
+          });
+        });
+      }
+    } catch(e) {}
+  }
+
+  return recap;
+}
+
+function renderRecapMatieres(f) {
+  const recap = calcRecapMatieres(f);
+  if (!recap.length) return '';
+  const rows = recap.map(r => `
+    <tr>
+      <td style="white-space:nowrap;">
+        ${r.hex ? `<span style="display:inline-block;width:14px;height:14px;background:${r.hex};border-radius:2px;margin-right:4px;vertical-align:middle;"></span>` : ''}
+        ${r.couleur || r.hex || ''}
+      </td>
+      <td style="text-align:center;">${r.usage}</td>
+      <td style="text-align:right;">${r.nbFils}</td>
+      <td style="text-align:right;">${r.longTotale_m ? r.longTotale_m.toFixed(1) + ' m' : '—'}</td>
+      <td style="text-align:right;">${r.poids_g !== null && r.poids_g !== undefined ? Math.round(r.poids_g) + ' g' : '—'}</td>
+    </tr>`).join('');
+  return `
+  <div class="fiche-section">
+    <div class="fiche-section-title">Récapitulatif des matières par couleur</div>
+    <table class="data-table" style="width:100%;">
+      <thead>
+        <tr style="background:var(--color-accent-bg);">
+          <th style="text-align:left;">Couleur</th>
+          <th style="text-align:center;">Usage</th>
+          <th style="text-align:right;">Quantité</th>
+          <th style="text-align:right;">Longueur totale</th>
+          <th style="text-align:right;">Poids estimé</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
   </div>`;
 }
 
