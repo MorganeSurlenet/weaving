@@ -564,20 +564,25 @@ const BlocsEnlissage = {
         const rect = seg.getBoundingClientRect();
         let left = rect.left;
         let top  = rect.bottom + 4;
-        // Ajuster si dépasse à droite
         if (left + pop.offsetWidth > window.innerWidth - 8) left = window.innerWidth - pop.offsetWidth - 8;
         if (top + pop.offsetHeight > window.innerHeight - 8) top = rect.top - pop.offsetHeight - 4;
         pop.style.left = left + 'px';
         pop.style.top  = top  + 'px';
+
+        // Fermer si clic en dehors du popover (avec délai pour éviter auto-fermeture)
+        setTimeout(() => {
+          const closeHandler = (ev) => {
+            if (!pop.contains(ev.target)) {
+              pop.remove();
+              document.removeEventListener('mousedown', closeHandler);
+            }
+          };
+          document.addEventListener('mousedown', closeHandler);
+        }, 100);
       });
 
       band.appendChild(seg);
     });
-
-    // Fermer le popover si clic en dehors
-    document.addEventListener('click', () => {
-      document.querySelectorAll('._blocs-popover').forEach(p => p.remove());
-    }, { once: true });
   },
 
   // Construit la map colonne → couleur d'occurrence
