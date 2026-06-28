@@ -323,7 +323,7 @@ function renderFicheDetailHTML(f) {
 
   <!-- Schéma -->
   <div class="fiche-section">
-    <div class="fiche-section-title">Schéma d'enlaçage, d'attachage et de pédalage</div>
+    <div class="fiche-section-title">Schéma d'enlissage, d'attachage et de pédalage</div>
     <div id="schema-readonly-container"></div>
     ${f.notes ? `<div style="margin-top:1rem; padding:0.75rem; background:var(--color-accent-bg); border-radius:4px; font-size:0.875rem;"><strong>Notes :</strong> ${f.notes}</div>` : ''}
   </div>`;
