@@ -381,50 +381,65 @@
 
         <!-- ── SECTION 6 : Schéma ── -->
         <div class="form-section">
-          <div class="form-section-title">Schéma d'enlaçage, d'attachage et de pédalage</div>
+          <div class="form-section-title" style="display:flex; justify-content:space-between; align-items:center;">
+            <span>Schéma d'enlaçage, d'attachage et de pédalage</span>
+            <button type="button" class="btn btn-sm" id="btn-edit-schema" onclick="toggleSchemaEditor()">Modifier le schéma</button>
+          </div>
 
-          <!-- Contrôles de l'éditeur -->
-          <div class="schema-controls">
-            <div class="schema-size-controls">
-              <label>Fils (colonnes) :
-                <input type="number" id="schema-cols" value="24" min="4" max="64" style="width:55px" onchange="resizeSchemaGrids()">
-              </label>
-              <label>Duites (lignes) :
-                <input type="number" id="schema-rows" value="16" min="4" max="64" style="width:55px" onchange="resizeSchemaGrids()">
-              </label>
-              <label>Cadres :
-                <input type="number" id="schema-shafts" value="4" min="2" max="8" style="width:45px" onchange="resizeSchemaGrids()">
-              </label>
-              <label>Pédales :
-                <input type="number" id="schema-treadles" value="4" min="2" max="8" style="width:45px" onchange="resizeSchemaGrids()">
-              </label>
-            </div>
-            <div style="display:flex; gap:0.5rem; align-items:center;">
-              <button type="button" class="btn btn-sm" onclick="clearSchema()">Effacer tout</button>
-              <span style="font-size:0.75rem; color:var(--color-text-muted);">Cliquez sur une case pour la remplir</span>
+          <!-- Aperçu lecture seule (affiché par défaut) -->
+          <div id="schema-preview-zone">
+            <div id="schema-readonly-container" class="draft-scroll-wrapper">
+              <div id="schema-readonly-display" style="color:var(--color-text-muted); font-size:0.85rem; padding:0.5rem 0;">Aucun schéma — cliquez sur "Modifier le schéma" pour en créer un.</div>
             </div>
           </div>
 
-          <!-- Conteneur du draft -->
-          <div class="draft-scroll-wrapper">
-          <div class="draft-container" id="draft-container">
-            <!-- Enlaçage : colonne 1, s'étend sur 2 lignes -->
-            <div class="draft-zone-enlacement">
-              <div class="draft-label">Enlaçage</div>
-              <div class="draft-grid" id="grid-enlacement"></div>
+          <!-- Éditeur interactif (masqué par défaut) -->
+          <div id="schema-editor-zone" style="display:none;">
+
+            <!-- Contrôles de l'éditeur -->
+            <div class="schema-controls">
+              <div class="schema-size-controls">
+                <label>Fils :
+                  <input type="number" id="schema-cols" value="24" min="4" max="64" style="width:55px" onchange="resizeSchemaGrids()">
+                </label>
+                <label>Duites :
+                  <input type="number" id="schema-rows" value="16" min="4" max="64" style="width:55px" onchange="resizeSchemaGrids()">
+                </label>
+                <label>Cadres :
+                  <input type="number" id="schema-shafts" value="4" min="2" max="8" style="width:45px" onchange="resizeSchemaGrids()">
+                </label>
+                <label>Pédales :
+                  <input type="number" id="schema-treadles" value="4" min="2" max="8" style="width:45px" onchange="resizeSchemaGrids()">
+                </label>
+              </div>
+              <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                <button type="button" class="btn btn-sm" onclick="clearSchema()">Effacer tout</button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="closeSchemaEditor()">Terminer</button>
+                <span style="font-size:0.75rem; color:var(--color-text-muted);">Cliquez sur une case pour la remplir</span>
+              </div>
             </div>
-            <!-- Attachage : colonne 2, ligne 1 -->
-            <div class="draft-zone-attachage">
-              <div class="draft-label">Attachage</div>
-              <div class="draft-grid" id="grid-attachage"></div>
+
+            <!-- Conteneur du draft -->
+            <div class="draft-scroll-wrapper">
+            <div class="draft-container" id="draft-container">
+              <!-- Enlaçage : colonne 1, s'étend sur 2 lignes -->
+              <div class="draft-zone-enlacement">
+                <div class="draft-label">Enlaçage</div>
+                <div class="draft-grid" id="grid-enlacement"></div>
+              </div>
+              <!-- Attachage : colonne 2, ligne 1 -->
+              <div class="draft-zone-attachage">
+                <div class="draft-label">Attachage</div>
+                <div class="draft-grid" id="grid-attachage"></div>
+              </div>
+              <!-- Pédalage : colonne 2, ligne 2 -->
+              <div class="draft-zone-pedalage">
+                <div class="draft-label">Pédalage</div>
+                <div class="draft-grid" id="grid-pedalage"></div>
+              </div>
             </div>
-            <!-- Pédalage : colonne 2, ligne 2 -->
-            <div class="draft-zone-pedalage">
-              <div class="draft-label">Pédalage</div>
-              <div class="draft-grid" id="grid-pedalage"></div>
-            </div>
-          </div>
-          </div><!-- /.draft-scroll-wrapper -->
+            </div><!-- /.draft-scroll-wrapper -->
+          </div><!-- /#schema-editor-zone -->
 
           <!-- Champ caché pour la sauvegarde -->
           <input type="hidden" id="schema-data" name="schema_data">
