@@ -114,6 +114,7 @@ function renderFilsView() {
           <div class="fil-card-body">
             <div class="fil-card-name">${fil.marque || ''} <span>${fil.reference || ''}</span></div>
             <div class="fil-card-meta">${[fil.coloris, nmDisplay, prixDisplay].filter(Boolean).join(' · ')}</div>
+            ${fil.lien ? `<a href="${fil.lien}" target="_blank" rel="noopener" class="fil-card-lien">🛒 Acheter en ligne</a>` : ''}
           </div>
           <div class="fil-card-actions">
             <button class="btn btn-sm" onclick="openEditFilModal('${fil.id}')" title="Modifier">✎</button>
@@ -148,6 +149,7 @@ function openEditFilModal(id) {
   document.getElementById('fil-nm').value        = fil.nm        || '';
   document.getElementById('fil-prix-kg').value   = fil.prix_kg   || '';
   document.getElementById('fil-notes').value     = fil.notes     || '';
+  document.getElementById('fil-lien').value      = fil.lien      || '';
   document.getElementById('fil-modal').style.display = 'flex';
 }
 
@@ -166,6 +168,7 @@ async function saveFilModal() {
     nm:        document.getElementById('fil-nm').value.trim(),
     prix_kg:   parseFloat(document.getElementById('fil-prix-kg').value) || 0,
     notes:     document.getElementById('fil-notes').value.trim(),
+    lien:      document.getElementById('fil-lien').value.trim(),
   };
   if (!fil.marque && !fil.reference) { showToast('Renseignez au moins la marque ou la référence', 'error'); return; }
 
