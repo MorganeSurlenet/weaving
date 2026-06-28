@@ -57,8 +57,7 @@ const SchemaEditor = {
     // Pédalage : duites × pédales
     this._renderGrid('grid-pedalage',   this.pedalage,   this.rows,   this.treadles, 'pedalage');
     // Bande couleur trame
-    TrameBand.resize(this.rows);
-    TrameBand.render();
+    BlocsTrame.renderBand();
   },
 
   _renderGrid(containerId, data, rows, cols, gridName) {
@@ -170,7 +169,10 @@ const SchemaEditor = {
       blocs:            BlocsEnlissage.blocs,
       blocsSequence:    BlocsEnlissage._lastSequence || [],
       blocsColors:      BlocsEnlissage.occurrenceColors || [],
-      trameColors:      TrameBand.rowColors || [],
+      // Blocs de trame
+      trameBlocs:        BlocsTrame.blocs,
+      trameSequence:     BlocsTrame._lastSequence || [],
+      trameRowOverrides: BlocsTrame.rowOverrides || {},
     });
     this.validateSchema();
   },
@@ -288,15 +290,28 @@ const SchemaEditor = {
       setVal('schema-rows',     this.rows);
       setVal('schema-shafts',   this.shafts);
       setVal('schema-treadles', this.treadles);
-      // Restaurer les couleurs de trame
-      if (d.trameColors && d.trameColors.length > 0) {
-        TrameBand.rowColors = d.trameColors;
-      } else {
-        TrameBand.rowColors = Array.from({ length: this.rows }, (_, i) =>
-          TrameBand._defaultColors[i % TrameBand._defaultColors.length]);
+      // Restaurer les blocs de trame
+      if (d.trameBlocs && d.trameBlocs.length > 0) {
+        BlocsTrame.blocs = d.trameBlocs;
+        BlocsTrame._lastSequence = d.trameSequence || [];
+        BlocsTrame.rowOverrides = d.trameRowOverrides || {};
+        BlocsTrame.render();
+        const trSeqInput = document.getElementById('trame-sequence');
+        if (trSeqInput && d.trameSequence && d.trameSequence.length > 0) {
+          // Reconstruire la séquence unique (sans répétitions)
+          const uniqueSeq = [];
+          let prev = null;
+          for (const t of d.trameSequence) {
+            if (t !== prev) { uniqueSeq.push(t); prev = t; }
+          }
+          trSeqInput.value = [...new Set(d.trameSequence)].join(' ');
+        }
+      } else if (d.trameColors && d.trameColors.length > 0) {
+        // Compatibilité ascendante : ancienne clé trameColors → rowOverrides
+        d.trameColors.forEach((c, i) => { BlocsTrame.rowOverrides[i] = c; });
       }
       this.render();
-      TrameBand.render();
+      BlocsTrame.renderBand();
       this.saveToHiddenField();
       this.validateSchema();
     } catch(e) { console.warn('Schema load error', e); }
@@ -421,31 +436,48 @@ const SchemaEditor = {
     makeReadOnlyGrid(zonePed, 'Pédalage', d.pedalage, d.rows, d.treadles);
 
     // Bande couleur trame à droite du pédalage
-    if (d.trameColors && d.trameColors.length > 0) {
-      const pedGrid = zonePed.querySelector('div[style*="grid"]') || zonePed.lastElementChild;
+    // Calculer les couleurs effectives depuis les blocs + overrides
+    const trameRowColors = [];
+    const trameRows = d.rows || 0;
+    if (trameRows > 0) {
+      const trBlocMap = {};
+      (d.trameBlocs || []).forEach(b => { trBlocMap[b.name] = b; });
+      const trSeq = d.trameSequence || [];
+      const trOverrides = d.trameRowOverrides || {};
+      const trDefaults = ['#4a7c9e','#c0392b','#27ae60','#8e44ad','#e67e22','#16a085','#d35400','#2c3e50'];
+      for (let r = 0; r < trameRows; r++) {
+        if (trOverrides[r]) { trameRowColors.push(trOverrides[r]); continue; }
+        // Chercher dans la séquence
+        let found = null;
+        let row = 0;
+        for (const t of trSeq) {
+          const bloc = trBlocMap[t];
+          if (!bloc) continue;
+          const bSize = bloc.size || bloc.colors.length || 2;
+          if (r >= row && r < row + bSize) {
+            found = bloc.colors[r - row] || trDefaults[(r - row) % trDefaults.length];
+            break;
+          }
+          row += bSize;
+        }
+        // Compatibilité ancienne clé trameColors
+        if (!found && d.trameColors && d.trameColors[r]) found = d.trameColors[r];
+        trameRowColors.push(found || trDefaults[r % trDefaults.length]);
+      }
+    }
+    if (trameRowColors.length > 0) {
       const cellSize = d.treadles > 32 ? 8 : d.treadles > 20 ? 10 : 12;
       const wrapper = document.createElement('div');
       wrapper.style.cssText = 'display:flex; align-items:flex-start; gap:2px;';
-      // Déplacer la grille dans le wrapper
       const gridEl = zonePed.querySelector('.draft-zone-readonly');
-      if (gridEl) {
-        wrapper.appendChild(gridEl);
-      } else {
-        // fallback : ré-envelopper le contenu
-        while (zonePed.lastChild && zonePed.lastChild !== zonePed.firstChild) {
-          wrapper.prepend(zonePed.lastChild);
-        }
-      }
+      if (gridEl) { wrapper.appendChild(gridEl); }
       const trameBandRo = document.createElement('div');
       trameBandRo.style.cssText = 'display:flex; flex-direction:column; gap:1px; margin-top:' + (cellSize + 4) + 'px;';
-      const rows = d.rows || d.trameColors.length;
-      for (let r = 0; r < rows; r++) {
-        const color = d.trameColors[r];
-        if (!color) continue;
+      trameRowColors.forEach(color => {
         const seg = document.createElement('div');
         seg.style.cssText = `width:${cellSize}px; height:${cellSize}px; background:${color}; border-radius:1px; flex-shrink:0;`;
         trameBandRo.appendChild(seg);
-      }
+      });
       wrapper.appendChild(trameBandRo);
       zonePed.appendChild(wrapper);
     }
@@ -972,116 +1004,318 @@ function updateSchemaPreview() {
   }
 }
 
-// ─── COULEURS DE TRAME ────────────────────────────────────────────────────────
-// Une couleur par duite (ligne du pédalage), affichée à droite de la grille
-const TrameBand = {
-  rowColors: [],   // array[rowIndex] = hex string
+function addBlocTrame() {
+  BlocsTrame.add();
+}
+function applyBlocsTrame() {
+  const seq    = document.getElementById('trame-sequence')?.value || '';
+  const repeat = parseInt(document.getElementById('trame-repeat')?.value) || 1;
+  BlocsTrame.applySequence(seq, repeat);
+}
+function toggleBlocsTramePanel() {
+  const body = document.getElementById('blocs-trame-body');
+  const btn  = document.getElementById('btn-blocs-trame-toggle');
+  if (!body) return;
+  const hidden = body.style.display === 'none';
+  body.style.display = hidden ? '' : 'none';
+  if (btn) btn.textContent = hidden ? 'Masquer' : 'Afficher';
+}
+
+// ─── BLOCS DE TRAME ──────────────────────────────────────────────────────────
+// Système de blocs identique à BlocsEnlissage pour la trame.
+// Chaque bloc définit une séquence de couleurs (une par duite du bloc).
+// rowOverrides[r] = couleur individuelle (prioritaire sur le bloc, modifiable au clic).
+const BlocsTrame = {
+  blocs: [],           // [{name, colors:[hex,...], size}]
+  _lastSequence: [],   // séquence complète après applySequence
+  rowOverrides: {},    // {rowIndex: hex} — couleurs individuelles
+
   _defaultColors: ['#4a7c9e','#c0392b','#27ae60','#8e44ad','#e67e22','#16a085','#d35400','#2c3e50'],
 
-  // Initialiser ou redimensionner le tableau de couleurs sans re-render
-  resize(rows) {
-    const prev = this.rowColors.slice();
-    this.rowColors = Array.from({ length: rows }, (_, i) => prev[i] || this._defaultColors[i % this._defaultColors.length]);
-    // render() est appelé par SchemaEditor.render() juste après
+  _nextLetter() {
+    const used = new Set(this.blocs.map(b => b.name));
+    let code = 65;
+    while (used.has(String.fromCharCode(code))) code++;
+    return String.fromCharCode(code);
   },
 
-  setColor(rowIdx, color) {
-    this.rowColors[rowIdx] = color;
+  // Palette commune : toutes les couleurs utilisées dans les blocs + overrides
+  _allColors() {
+    const set = new Set();
+    this.blocs.forEach(b => (b.colors || []).forEach(c => { if(c) set.add(c); }));
+    Object.values(this.rowOverrides).forEach(c => { if(c) set.add(c); });
+    // Ajouter aussi les couleurs des blocs enlissage pour la palette partagée
+    if (typeof BlocsEnlissage !== 'undefined') {
+      (BlocsEnlissage.occurrenceColors || []).forEach(c => { if(c) set.add(c); });
+    }
+    return [...set];
+  },
+
+  // Calcule la couleur effective d'une duite (override > bloc > défaut)
+  _colorForRow(r) {
+    if (this.rowOverrides[r]) return this.rowOverrides[r];
+    // Chercher dans la séquence
+    if (this._lastSequence && this._lastSequence.length) {
+      const blocMap = {};
+      this.blocs.forEach(b => { blocMap[b.name] = b; });
+      let row = 0;
+      for (const t of this._lastSequence) {
+        const bloc = blocMap[t];
+        if (!bloc) continue;
+        const bSize = bloc.size || bloc.colors.length || 2;
+        if (r >= row && r < row + bSize) {
+          return bloc.colors[r - row] || this._defaultColors[(r - row) % this._defaultColors.length];
+        }
+        row += bSize;
+      }
+    }
+    return this._defaultColors[r % this._defaultColors.length];
+  },
+
+  add() {
+    const name = this._nextLetter();
+    const size = 2;
+    const colors = [
+      this._defaultColors[this.blocs.length % this._defaultColors.length],
+      this._defaultColors[(this.blocs.length + 1) % this._defaultColors.length]
+    ];
+    this.blocs.push({ name, colors, size });
     this.render();
+  },
+
+  remove(name) {
+    this.blocs = this.blocs.filter(b => b.name !== name);
+    this.render();
+  },
+
+  resizeBloc(name, newSize) {
+    const bloc = this.blocs.find(b => b.name === name);
+    if (!bloc) return;
+    bloc.size = newSize;
+    const prev = bloc.colors.slice();
+    bloc.colors = Array.from({length: newSize}, (_, i) =>
+      prev[i] || this._defaultColors[i % this._defaultColors.length]);
+    this.render();
+  },
+
+  setStepColor(blocName, stepIdx, color) {
+    const bloc = this.blocs.find(b => b.name === blocName);
+    if (!bloc) return;
+    bloc.colors[stepIdx] = color;
+    this.render();
+    this.renderBand();
     SchemaEditor.saveToHiddenField();
     updateSchemaPreview();
   },
 
-  render() {
+  // Couleur individuelle d'une duite (override)
+  setRowColor(rowIdx, color) {
+    this.rowOverrides[rowIdx] = color;
+    this.renderBand();
+    SchemaEditor.saveToHiddenField();
+    updateSchemaPreview();
+    // Mettre à jour le récapitulatif matières
+    if (typeof syncOurdissageFromEnlissage === 'function' && BlocsEnlissage._lastSequence?.length) {
+      const blocMap = {};
+      BlocsEnlissage.blocs.forEach(b => { blocMap[b.name] = b; });
+      syncOurdissageFromEnlissage(BlocsEnlissage._lastSequence, blocMap,
+        BlocsEnlissage.occurrenceColors, BlocsEnlissage._defaultColors);
+    }
+  },
+
+  // Rendu de la bande colorée à droite du pédalage
+  renderBand() {
     const band = document.getElementById('trame-band');
     if (!band) return;
     const rows = SchemaEditor.rows;
     const cellSize = rows > 32 ? 10 : rows > 20 ? 12 : 14;
+    const allColors = this._allColors();
     band.innerHTML = '';
 
     for (let r = 0; r < rows; r++) {
-      const color = this.rowColors[r] || this._defaultColors[r % this._defaultColors.length];
-
+      const color = this._colorForRow(r);
       const seg = document.createElement('div');
-      seg.style.cssText = `width:${cellSize}px; height:${cellSize}px; background:${color}; border-radius:2px; flex-shrink:0; position:relative; cursor:pointer;`;
-      seg.title = `Duite ${r + 1} — cliquer pour changer la couleur`;
+      seg.dataset.row = r;
+      seg.style.cssText = `width:${cellSize}px; height:${cellSize}px; background:${color}; border-radius:2px; flex-shrink:0; cursor:pointer;`;
+      seg.title = `Duite ${r + 1} — cliquer pour modifier`;
 
       const idx = r;
       seg.addEventListener('click', (e) => {
         e.stopPropagation();
         document.querySelectorAll('._trame-popover').forEach(p => p.remove());
-
-        const usedColors = [...new Set(this.rowColors)];
-        const pop = document.createElement('div');
-        pop.className = '_trame-popover';
-        pop.style.cssText = 'position:fixed; z-index:9999; background:#fff; border:1px solid #ccc; border-radius:6px; padding:8px; box-shadow:0 4px 16px rgba(0,0,0,0.18); display:flex; flex-direction:column; gap:6px; min-width:160px;';
-
-        const title = document.createElement('div');
-        title.style.cssText = 'font-size:0.75rem; font-weight:600; color:#555; margin-bottom:2px;';
-        title.textContent = `Couleur — Duite ${r + 1}`;
-        pop.appendChild(title);
-
-        if (usedColors.length > 0) {
-          const palLbl = document.createElement('div');
-          palLbl.style.cssText = 'font-size:0.7rem; color:#888;';
-          palLbl.textContent = 'Couleurs existantes :';
-          pop.appendChild(palLbl);
-
-          const pal = document.createElement('div');
-          pal.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px;';
-          usedColors.forEach(c => {
-            const swatch = document.createElement('div');
-            swatch.style.cssText = `width:22px; height:22px; background:${c}; border-radius:3px; cursor:pointer; border:2px solid ${c === color ? '#333' : 'transparent'}; box-sizing:border-box;`;
-            swatch.title = c;
-            swatch.addEventListener('click', (ev) => {
-              ev.stopPropagation();
-              TrameBand.setColor(idx, c);
-              pop.remove();
-            });
-            pal.appendChild(swatch);
-          });
-          pop.appendChild(pal);
-        }
-
-        const pickerRow = document.createElement('div');
-        pickerRow.style.cssText = 'display:flex; align-items:center; gap:6px; margin-top:2px;';
-        const pickerLbl = document.createElement('label');
-        pickerLbl.style.cssText = 'font-size:0.75rem; color:#555; cursor:pointer; display:flex; align-items:center; gap:4px;';
-        pickerLbl.textContent = 'Autre couleur\u2026';
-        const pickerInp = document.createElement('input');
-        pickerInp.type = 'color';
-        pickerInp.value = color;
-        pickerInp.style.cssText = 'width:28px; height:24px; padding:0; border:none; cursor:pointer; border-radius:3px;';
-        pickerInp.addEventListener('input', () => {
-          seg.style.background = pickerInp.value;
-          TrameBand.setColor(idx, pickerInp.value);
-        });
-        pickerInp.addEventListener('change', () => { pop.remove(); });
-        pickerLbl.appendChild(pickerInp);
-        pickerRow.appendChild(pickerLbl);
-        pop.appendChild(pickerRow);
-
-        document.body.appendChild(pop);
-        const rect = seg.getBoundingClientRect();
-        let left = rect.right + 4;
-        let top  = rect.top;
-        if (left + pop.offsetWidth > window.innerWidth - 8) left = rect.left - pop.offsetWidth - 4;
-        if (top + pop.offsetHeight > window.innerHeight - 8) top = window.innerHeight - pop.offsetHeight - 8;
-        pop.style.left = left + 'px';
-        pop.style.top  = top  + 'px';
-
-        setTimeout(() => {
-          const closeHandler = (ev) => {
-            if (!pop.contains(ev.target)) {
-              pop.remove();
-              document.removeEventListener('mousedown', closeHandler);
-            }
-          };
-          document.addEventListener('mousedown', closeHandler);
-        }, 100);
+        _showColorPopover(seg, color, allColors,
+          (c) => { BlocsTrame.setRowColor(idx, c); },
+          `Duite ${r + 1}`
+        );
       });
-
       band.appendChild(seg);
     }
+  },
+
+  // Rendu du panneau de définition des blocs dans #trame-blocs-list
+  render() {
+    const container = document.getElementById('trame-blocs-list');
+    if (!container) return;
+    if (this.blocs.length === 0) {
+      container.innerHTML = '<div style="font-size:0.78rem; color:var(--color-text-muted);">Aucun bloc défini.</div>';
+      return;
+    }
+    container.innerHTML = '';
+    this.blocs.forEach(bloc => {
+      const size = bloc.size || bloc.colors.length || 2;
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'display:flex; align-items:center; gap:0.5rem; padding:0.4rem; background:#fff; border:1px solid var(--color-border-light,#e0d8cc); border-radius:4px; flex-wrap:wrap;';
+
+      // Label + supprimer
+      const labelCol = document.createElement('div');
+      labelCol.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:4px; min-width:28px;';
+      const lbl = document.createElement('strong');
+      lbl.textContent = bloc.name;
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button'; delBtn.textContent = '×';
+      delBtn.style.cssText = 'background:none; border:none; color:#c0392b; cursor:pointer; font-size:0.9rem; padding:0;';
+      delBtn.onclick = () => BlocsTrame.remove(bloc.name);
+      labelCol.appendChild(lbl); labelCol.appendChild(delBtn);
+      wrap.appendChild(labelCol);
+
+      // Pastilles de couleur pour chaque duite du bloc
+      const stepsEl = document.createElement('div');
+      stepsEl.style.cssText = 'display:flex; gap:3px; align-items:center; flex-wrap:wrap;';
+      for (let s = 0; s < size; s++) {
+        const c = bloc.colors[s] || '#cccccc';
+        const sw = document.createElement('div');
+        sw.style.cssText = `width:20px; height:20px; background:${c}; border-radius:3px; cursor:pointer; border:1px solid #ccc;`;
+        sw.title = `Duite ${s + 1} du bloc ${bloc.name}`;
+        const bName = bloc.name, sIdx = s;
+        sw.addEventListener('click', (e) => {
+          e.stopPropagation();
+          document.querySelectorAll('._trame-step-popover').forEach(p => p.remove());
+          _showColorPopover(sw, c, BlocsTrame._allColors(),
+            (col) => BlocsTrame.setStepColor(bName, sIdx, col),
+            `Bloc ${bName} — duite ${sIdx + 1}`,
+            '_trame-step-popover'
+          );
+        });
+        stepsEl.appendChild(sw);
+      }
+      wrap.appendChild(stepsEl);
+
+      // Boutons taille
+      const sizeRow = document.createElement('div');
+      sizeRow.style.cssText = 'display:flex; align-items:center; gap:3px; font-size:0.75rem;';
+      const sizeLbl = document.createElement('span'); sizeLbl.textContent = 'Duites :';
+      const btnM = document.createElement('button'); btnM.type='button'; btnM.textContent='−';
+      btnM.style.cssText = 'width:20px; height:20px; padding:0; font-size:0.9rem; border:1px solid #ccc; border-radius:3px; background:#f5f5f5; cursor:pointer;';
+      const sizeVal = document.createElement('span');
+      sizeVal.style.cssText = 'min-width:18px; text-align:center; font-weight:600;';
+      sizeVal.textContent = size;
+      const btnP = document.createElement('button'); btnP.type='button'; btnP.textContent='+';
+      btnP.style.cssText = 'width:20px; height:20px; padding:0; font-size:0.9rem; border:1px solid #ccc; border-radius:3px; background:#f5f5f5; cursor:pointer;';
+      const bNameSize = bloc.name;
+      btnM.onclick = () => { const cur = BlocsTrame.blocs.find(b=>b.name===bNameSize)?.size||2; if(cur>1) BlocsTrame.resizeBloc(bNameSize, cur-1); };
+      btnP.onclick = () => { const cur = BlocsTrame.blocs.find(b=>b.name===bNameSize)?.size||2; if(cur<32) BlocsTrame.resizeBloc(bNameSize, cur+1); };
+      sizeRow.appendChild(sizeLbl); sizeRow.appendChild(btnM); sizeRow.appendChild(sizeVal); sizeRow.appendChild(btnP);
+      wrap.appendChild(sizeRow);
+      container.appendChild(wrap);
+    });
+  },
+
+  // Applique la séquence de blocs à la bande trame
+  applySequence(sequenceStr, repeat) {
+    if (this.blocs.length === 0) { showToast('Définissez au moins un bloc trame avant d'appliquer.', 'error'); return; }
+    const tokens = sequenceStr.trim().toUpperCase().split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) { showToast('Entrez une séquence (ex : A B A B).', 'error'); return; }
+    const blocMap = {};
+    this.blocs.forEach(b => { blocMap[b.name] = b; });
+    for (const t of tokens) {
+      if (!blocMap[t]) { showToast(`Bloc trame "${t}" non défini.`, 'error'); return; }
+    }
+    const fullSeq = [];
+    for (let i = 0; i < repeat; i++) fullSeq.push(...tokens);
+    this._lastSequence = fullSeq;
+    this.rowOverrides = {}; // Réinitialiser les overrides individuels
+
+    // Calculer le nombre total de duites
+    const totalRows = fullSeq.reduce((s, t) => s + (blocMap[t].size || blocMap[t].colors.length || 2), 0);
+
+    // Redimensionner le pédalage si nécessaire
+    if (totalRows !== SchemaEditor.rows) {
+      SchemaEditor.rows = totalRows;
+      const rowsInput = document.getElementById('schema-rows');
+      if (rowsInput) rowsInput.value = totalRows;
+      SchemaEditor.initData(false);
+    }
+
+    SchemaEditor.render();
+    SchemaEditor.saveToHiddenField();
+    this.renderBand();
+    showToast(`Trame remplie : ${totalRows} duites en ${fullSeq.length} blocs.`, 'success');
+  },
+
+  // Compatibilité avec l'ancien code (resize appelé depuis SchemaEditor.render)
+  resize(rows) {
+    // Rien à faire : renderBand() est appelé explicitement
   }
 };
+
+// Alias pour compatibilité avec saveToHiddenField / loadFromData
+const TrameBand = BlocsTrame;
+
+// ─── POPOVER COULEUR PARTAGÉ ──────────────────────────────────────────────────
+// Utilisé par BlocsEnlissage (bande) et BlocsTrame (bande + blocs)
+function _showColorPopover(anchorEl, currentColor, palette, onSelect, title, popClass) {
+  const cls = popClass || '_color-popover';
+  document.querySelectorAll('.' + cls).forEach(p => p.remove());
+  const pop = document.createElement('div');
+  pop.className = cls;
+  pop.style.cssText = 'position:fixed; z-index:9999; background:#fff; border:1px solid #ccc; border-radius:6px; padding:8px; box-shadow:0 4px 16px rgba(0,0,0,0.18); display:flex; flex-direction:column; gap:6px; min-width:160px;';
+
+  if (title) {
+    const ttl = document.createElement('div');
+    ttl.style.cssText = 'font-size:0.75rem; font-weight:600; color:#555; margin-bottom:2px;';
+    ttl.textContent = title;
+    pop.appendChild(ttl);
+  }
+
+  if (palette.length > 0) {
+    const palLbl = document.createElement('div');
+    palLbl.style.cssText = 'font-size:0.7rem; color:#888;';
+    palLbl.textContent = 'Couleurs disponibles :';
+    pop.appendChild(palLbl);
+    const pal = document.createElement('div');
+    pal.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px;';
+    palette.forEach(c => {
+      const sw = document.createElement('div');
+      sw.style.cssText = `width:22px; height:22px; background:${c}; border-radius:3px; cursor:pointer; border:2px solid ${c === currentColor ? '#333' : 'transparent'}; box-sizing:border-box;`;
+      sw.addEventListener('click', (ev) => { ev.stopPropagation(); onSelect(c); pop.remove(); });
+      pal.appendChild(sw);
+    });
+    pop.appendChild(pal);
+  }
+
+  const pickerLbl = document.createElement('label');
+  pickerLbl.style.cssText = 'font-size:0.75rem; color:#555; cursor:pointer; display:flex; align-items:center; gap:4px;';
+  pickerLbl.textContent = 'Autre couleur…';
+  const pickerInp = document.createElement('input');
+  pickerInp.type = 'color';
+  pickerInp.value = currentColor || '#4a7c9e';
+  pickerInp.style.cssText = 'width:28px; height:24px; padding:0; border:none; cursor:pointer; border-radius:3px;';
+  pickerInp.addEventListener('input', () => { onSelect(pickerInp.value); });
+  pickerInp.addEventListener('change', () => { pop.remove(); });
+  pickerLbl.appendChild(pickerInp);
+  pop.appendChild(pickerLbl);
+
+  document.body.appendChild(pop);
+  const rect = anchorEl.getBoundingClientRect();
+  let left = rect.right + 4, top = rect.top;
+  if (left + 180 > window.innerWidth - 8) left = rect.left - 184;
+  if (top + 200 > window.innerHeight - 8) top = window.innerHeight - 208;
+  pop.style.left = left + 'px';
+  pop.style.top  = top  + 'px';
+
+  setTimeout(() => {
+    const ch = (ev) => { if (!pop.contains(ev.target)) { pop.remove(); document.removeEventListener('mousedown', ch); } };
+    document.addEventListener('mousedown', ch);
+  }, 100);
+}
+
