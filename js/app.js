@@ -796,6 +796,9 @@ function saveConfig() {
   updateConfigStatus();
   document.getElementById('modal-config').classList.remove('open');
   loadFichesFromGithub().then(() => renderFichesList());
+  if (typeof FilsLib !== 'undefined') {
+    FilsLib.load().then(() => { refreshFilsSelects(); renderFilsView(); });
+  }
 }
 
 // ─── CONVERTISSEUR TITRAGE (NeC/NeL → Nm) ──────────────────────────────────
@@ -867,6 +870,11 @@ async function init() {
   updateConfigStatus();
   await loadFichesFromGithub();
   renderFichesList();
+  // Charger la bibliothèque de fils
+  if (typeof FilsLib !== 'undefined') {
+    await FilsLib.load();
+    refreshFilsSelects();
+  }
 
   // Écouteurs navigation
   $$('nav a[data-view]').forEach(a => {
@@ -876,6 +884,7 @@ async function init() {
       if (view === 'view-form') { openNewFiche(); return; }
       showView(view);
       if (view === 'view-list') renderFichesList();
+      if (view === 'view-fils') renderFilsView();
     });
   });
 
