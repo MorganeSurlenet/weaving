@@ -774,36 +774,46 @@ function resizeOurdissage() {
 }
 
 // Synchronise le tableau d'ourdissage depuis la séquence de blocs d'enlissage
-// Regroupe les occurrences consécutives du même bloc avec la même couleur en une seule ligne
+// Chaque occurrence = une colonne distincte ; les couleurs identiques = lignes différentes
+// L'ordre est de droite à gauche : occurrence 1 dans la dernière colonne
 function syncOurdissageFromEnlissage(fullSeq, blocMap, occurrenceColors, defaultColors) {
   if (!fullSeq || fullSeq.length === 0) return;
 
-  // Construire les lignes : une occurrence = une ligne dans l'ourdissage
-  // On regroupe les occurrences consécutives identiques (même bloc + même couleur)
-  const newRows = [];
+  const nbOccurrences = fullSeq.length;
+
+  // Adapter le nombre de colonnes au nombre d'occurrences
+  if (NB_OURDISSAGE_COLS !== nbOccurrences) {
+    NB_OURDISSAGE_COLS = nbOccurrences;
+    _renderOurdissageThead(nbOccurrences);
+    const inp = document.getElementById('ourdissage-nb-cols');
+    if (inp) inp.value = nbOccurrences;
+  }
+
+  // Construire une ligne par couleur unique (identifiée par hex)
+  // Chaque ligne a un tableau de colonnes : sequence[colIdx] = nbFils si cette couleur est dans cette occurrence
+  // Les colonnes sont indexées de droite à gauche : colonne 0 = occurrence la plus à droite (dernière)
+  const colorMap = {}; // hex -> { couleur, hex, sequence[] }
+
   fullSeq.forEach((t, i) => {
     const bloc = blocMap[t];
     if (!bloc) return;
     const nbFils = bloc.size || bloc.pattern[0]?.length || 4;
     const color  = occurrenceColors[i] || defaultColors[i % defaultColors.length];
     const label  = `Bloc ${t}`;
-    // Fusionner avec la ligne précédente si même bloc + même couleur
-    const last = newRows[newRows.length - 1];
-    if (last && last._blocName === t && last.hex === color) {
-      last.sequence[0] = (parseInt(last.sequence[0] || 0) + nbFils).toString();
-    } else {
-      newRows.push({ couleur: label, hex: color, sequence: [nbFils.toString()], _blocName: t });
+    // Colonne dans le tableau : occurrence 0 = colonne la plus à droite = index (nbOccurrences - 1)
+    const colIdx = nbOccurrences - 1 - i;
+
+    if (!colorMap[color]) {
+      colorMap[color] = {
+        couleur: label,
+        hex: color,
+        sequence: Array(nbOccurrences).fill('')
+      };
     }
+    colorMap[color].sequence[colIdx] = nbFils.toString();
   });
 
-  // Adapter le nombre de colonnes si nécessaire (au moins 1)
-  const neededCols = Math.max(NB_OURDISSAGE_COLS, 1);
-  if (NB_OURDISSAGE_COLS < 1) {
-    NB_OURDISSAGE_COLS = 1;
-    _renderOurdissageThead(1);
-    const inp = document.getElementById('ourdissage-nb-cols');
-    if (inp) inp.value = 1;
-  }
+  const newRows = Object.values(colorMap);
 
   // Remplir le tableau
   initOurdissageForm(newRows);
