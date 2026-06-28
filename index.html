@@ -393,65 +393,7 @@
           </div>
         </div>
 
-        <!-- ── SECTION 4 : Tableau d'ourdissage ── -->
-        <div class="form-section">
-          <div class="form-section-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
-            <span>Tableau d'ourdissage des fils de chaîne</span>
-            <label style="font-size:0.8rem; font-weight:400; display:flex; align-items:center; gap:0.4rem; margin:0;">
-              Groupes :
-              <input type="number" id="ourdissage-nb-cols" value="16" min="4" max="48" step="1"
-                style="width:55px;"
-                onchange="resizeOurdissage()">
-            </label>
-          </div>
-          <div style="overflow-x:auto;">
-            <table class="ourdissage-table" id="ourdissage-table">
-              <thead id="ourdissage-thead">
-                <!-- Généré par JS -->
-              </thead>
-              <tbody id="ourdissage-tbody">
-                <!-- Généré par JS -->
-              </tbody>
-            </table>
-          </div>
-          <div style="margin-top:0.5rem;">
-            <button type="button" class="btn btn-sm" onclick="addOurdissageRow()">+ Ajouter une couleur</button>
-          </div>
-        </div>
-
-        <!-- ── SECTION 5 : Tableau de comptage de lisses ── -->
-        <div class="form-section">
-          <div class="form-section-title">Tableau de comptage de lisses</div>
-          <div style="overflow-x:auto;">
-            <table class="lisses-table">
-              <thead>
-                <tr>
-                  <th rowspan="2">Cadres</th>
-                  <th colspan="3">Lisses par groupe</th>
-                  <th colspan="3">× nb répétitions de chaque motif</th>
-                  <th rowspan="2">+ reste hors motif</th>
-                  <th rowspan="2">= total lisses par cadre</th>
-                </tr>
-                <tr>
-                  <th>Motif 1</th><th>Motif 2</th><th>Motif 3</th>
-                  <th>Motif 1</th><th>Motif 2</th><th>Motif 3</th>
-                </tr>
-              </thead>
-              <tbody id="lisses-tbody">
-                <!-- Généré par JS -->
-              </tbody>
-              <tfoot>
-                <tr class="total-row">
-                  <td>Total</td>
-                  <td colspan="7"></td>
-                  <td><input type="number" id="lisses-total" placeholder="Total" style="width:60px"> lisses</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
-
-        <!-- ── SECTION 6 : Schéma ── -->
+        <!-- ── SECTION 4 : Schéma ── -->
         <div class="form-section">
           <div class="form-section-title" style="display:flex; justify-content:space-between; align-items:center;">
             <span>Schéma d'enlissage, d'attachage et de pédalage</span>
@@ -522,6 +464,8 @@
               <!-- Enlissage : colonne 1, s'étend sur 2 lignes -->
               <div class="draft-zone-enlacement">
                 <div class="draft-label">Enlissage</div>
+                <!-- Bande de blocs colorés au-dessus de la grille -->
+                <div id="blocs-band" style="display:flex; height:14px; gap:1px; margin-bottom:2px;"></div>
                 <div class="draft-grid" id="grid-enlissage"></div>
               </div>
               <!-- Attachage : colonne 2, ligne 1 -->
@@ -555,6 +499,64 @@
             <input type="hidden" id="schema-b64">
             <div id="schema-preview" style="margin-top:0.5rem;"></div>
             <input type="file" id="schema-file" accept="image/*" style="display:none" onchange="handleSchemaUpload(this)">
+          </div>
+        </div>
+
+        <!-- ── SECTION 5 : Tableau d'ourdissage ── -->
+        <div class="form-section">
+          <div class="form-section-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+            <span>Tableau d'ourdissage des fils de chaîne</span>
+            <label style="font-size:0.8rem; font-weight:400; display:flex; align-items:center; gap:0.4rem; margin:0;">
+              Groupes :
+              <input type="number" id="ourdissage-nb-cols" value="16" min="4" max="48" step="1"
+                style="width:55px;"
+                onchange="resizeOurdissage()">
+            </label>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="ourdissage-table" id="ourdissage-table">
+              <thead id="ourdissage-thead">
+                <!-- Généré par JS -->
+              </thead>
+              <tbody id="ourdissage-tbody">
+                <!-- Généré par JS -->
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top:0.5rem;">
+            <button type="button" class="btn btn-sm" onclick="addOurdissageRow()">+ Ajouter une couleur</button>
+          </div>
+        </div>
+
+        <!-- ── SECTION 6 : Tableau de comptage de lisses ── -->
+        <div class="form-section">
+          <div class="form-section-title">Tableau de comptage de lisses</div>
+          <div style="overflow-x:auto;">
+            <table class="lisses-table">
+              <thead>
+                <tr>
+                  <th rowspan="2">Cadres</th>
+                  <th colspan="3">Lisses par groupe</th>
+                  <th colspan="3">× nb répétitions de chaque motif</th>
+                  <th rowspan="2">+ reste hors motif</th>
+                  <th rowspan="2">= total lisses par cadre</th>
+                </tr>
+                <tr>
+                  <th>Motif 1</th><th>Motif 2</th><th>Motif 3</th>
+                  <th>Motif 1</th><th>Motif 2</th><th>Motif 3</th>
+                </tr>
+              </thead>
+              <tbody id="lisses-tbody">
+                <!-- Généré par JS -->
+              </tbody>
+              <tfoot>
+                <tr class="total-row">
+                  <td>Total</td>
+                  <td colspan="7"></td>
+                  <td><input type="number" id="lisses-total" placeholder="Total" style="width:60px"> lisses</td>
+                </tr>
+              </tfoot>
+            </table>
           </div>
         </div>
 
