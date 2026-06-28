@@ -1222,7 +1222,7 @@ const BlocsTrame = {
 
   // Applique la séquence de blocs à la bande trame
   applySequence(sequenceStr, repeat) {
-    if (this.blocs.length === 0) { showToast('Définissez au moins un bloc trame avant d'appliquer.', 'error'); return; }
+    if (this.blocs.length === 0) { showToast('Définissez au moins un bloc trame avant d\'appliquer.', 'error'); return; }
     const tokens = sequenceStr.trim().toUpperCase().split(/\s+/).filter(Boolean);
     if (tokens.length === 0) { showToast('Entrez une séquence (ex : A B A B).', 'error'); return; }
     const blocMap = {};
