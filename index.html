@@ -395,17 +395,19 @@
 
         <!-- ── SECTION 4 : Tableau d'ourdissage ── -->
         <div class="form-section">
-          <div class="form-section-title">Tableau d'ourdissage des fils de chaîne</div>
+          <div class="form-section-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+            <span>Tableau d'ourdissage des fils de chaîne</span>
+            <label style="font-size:0.8rem; font-weight:400; display:flex; align-items:center; gap:0.4rem; margin:0;">
+              Groupes :
+              <input type="number" id="ourdissage-nb-cols" value="16" min="4" max="48" step="1"
+                style="width:55px;"
+                onchange="resizeOurdissage()">
+            </label>
+          </div>
           <div style="overflow-x:auto;">
-            <table class="ourdissage-table">
-              <thead>
-                <tr>
-                  <th>Couleur</th>
-                  <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th>
-                  <th>9</th><th>10</th><th>11</th><th>12</th><th>13</th><th>14</th><th>15</th><th>16</th>
-                  <th>=</th>
-                  <th></th>
-                </tr>
+            <table class="ourdissage-table" id="ourdissage-table">
+              <thead id="ourdissage-thead">
+                <!-- Généré par JS -->
               </thead>
               <tbody id="ourdissage-tbody">
                 <!-- Généré par JS -->
