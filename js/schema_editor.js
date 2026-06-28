@@ -468,27 +468,48 @@ const BlocsEnlissage = {
     this.renderBand();
   },
 
-  // Affiche la bande colorée au-dessus de la grille d'enlissage
+  // Affiche la bande colorée au-dessus + les sélecteurs de couleur sous la grille d'enlissage
   renderBand() {
-    const band = document.getElementById('blocs-band');
+    const band    = document.getElementById('blocs-band');
+    const colorRow = document.getElementById('blocs-color-row');
     if (!band || !this._lastSequence || !this._lastSequence.length) return;
     const cellSize = SchemaEditor.cols > 32 ? 10 : SchemaEditor.cols > 20 ? 12 : 14;
     const blocMap = {};
     this.blocs.forEach(b => { blocMap[b.name] = b; });
     band.innerHTML = '';
     band.style.gap = '1px';
+    if (colorRow) { colorRow.innerHTML = ''; colorRow.style.gap = '1px'; }
+
     this._lastSequence.forEach((t, i) => {
       const bloc = blocMap[t];
       if (!bloc) return;
       const bSize = bloc.size || bloc.pattern[0]?.length || 4;
       const color = this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length];
+      const segW = bSize * cellSize + (bSize - 1); // largeur exacte du segment
+
+      // Bande colorée
       const seg = document.createElement('div');
-      seg.style.cssText = `width:${bSize * cellSize + (bSize - 1)}px; height:14px; background:${color}; border-radius:2px; flex-shrink:0; display:flex; align-items:center; justify-content:center;`;
+      seg.style.cssText = `width:${segW}px; height:14px; background:${color}; border-radius:2px; flex-shrink:0; display:flex; align-items:center; justify-content:center;`;
       const lbl = document.createElement('span');
       lbl.style.cssText = 'font-size:9px; font-weight:700; color:#fff; text-shadow:0 0 2px rgba(0,0,0,0.5); line-height:1;';
       lbl.textContent = bloc.name;
       seg.appendChild(lbl);
       band.appendChild(seg);
+
+      // Sélecteur de couleur sous la grille, aligné sur le bloc
+      if (colorRow) {
+        const wrap = document.createElement('div');
+        wrap.style.cssText = `width:${segW}px; flex-shrink:0; display:flex; align-items:center; justify-content:center;`;
+        const inp = document.createElement('input');
+        inp.type = 'color';
+        inp.value = color;
+        inp.title = `Couleur occurrence ${i + 1} (${bloc.name})`;
+        inp.style.cssText = 'width:100%; height:14px; padding:0; border:none; cursor:pointer; border-radius:2px;';
+        const idx = i;
+        inp.oninput = () => BlocsEnlissage.setOccurrenceColor(idx, inp.value);
+        wrap.appendChild(inp);
+        colorRow.appendChild(wrap);
+      }
     });
   },
 
@@ -717,6 +738,7 @@ const BlocsEnlissage = {
     SchemaEditor.saveToHiddenField();
     this.renderBand();
     updateBlocsColorPickers();
+    syncOurdissageFromEnlissage(fullSeq, blocMap, this.occurrenceColors, this._defaultColors);
     showToast(`Enlissage rempli : ${totalCols} fils en ${fullSeq.length} blocs.`, 'success');
   }
 };
