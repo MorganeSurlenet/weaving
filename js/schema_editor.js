@@ -469,7 +469,7 @@ const BlocsEnlissage = {
   },
 
   // Affiche la bande colorée au-dessus de la grille d'enlissage
-  // Chaque segment est cliquable et ouvre un color picker natif (input hors DOM, déclenché par click)
+  // Chaque segment contient un input[type=color] de taille réelle mais transparent, avec la lettre par-dessus
   renderBand() {
     const band = document.getElementById('blocs-band');
     if (!band || !this._lastSequence || !this._lastSequence.length) return;
@@ -479,16 +479,6 @@ const BlocsEnlissage = {
     band.innerHTML = '';
     band.style.gap = '1px';
 
-    // Input color unique réutilisé, placé hors du flux (position fixed hors écran)
-    let sharedPicker = document.getElementById('_blocs-shared-picker');
-    if (!sharedPicker) {
-      sharedPicker = document.createElement('input');
-      sharedPicker.type = 'color';
-      sharedPicker.id = '_blocs-shared-picker';
-      sharedPicker.style.cssText = 'position:fixed; left:-9999px; top:-9999px; opacity:0; width:1px; height:1px;';
-      document.body.appendChild(sharedPicker);
-    }
-
     this._lastSequence.forEach((t, i) => {
       const bloc = blocMap[t];
       if (!bloc) return;
@@ -496,26 +486,29 @@ const BlocsEnlissage = {
       const color = this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length];
       const segW = bSize * cellSize + (bSize - 1);
 
+      // Wrapper positionné relatif
       const seg = document.createElement('div');
       seg.title = `Cliquer pour changer la couleur (occurrence ${i + 1} — Bloc ${t})`;
-      seg.style.cssText = `width:${segW}px; height:20px; background:${color}; border-radius:2px; flex-shrink:0; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none;`;
+      seg.style.cssText = `width:${segW}px; height:20px; background:${color}; border-radius:2px; flex-shrink:0; position:relative; cursor:pointer;`;
 
+      // Lettre centrée, non-interactive
       const lbl = document.createElement('span');
-      lbl.style.cssText = 'font-size:9px; font-weight:700; color:#fff; text-shadow:0 0 2px rgba(0,0,0,0.6); line-height:1; pointer-events:none;';
+      lbl.style.cssText = 'position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:#fff; text-shadow:0 0 2px rgba(0,0,0,0.6); pointer-events:none; z-index:1;';
       lbl.textContent = bloc.name;
       seg.appendChild(lbl);
 
+      // Input color pleine taille, transparent, par-dessus
+      const inp = document.createElement('input');
+      inp.type = 'color';
+      inp.value = color;
+      inp.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; opacity:0.001; cursor:pointer; border:none; padding:0; margin:0; z-index:2;';
+      const segRef = seg;
       const idx = i;
-      seg.addEventListener('click', () => {
-        sharedPicker.value = BlocsEnlissage.occurrenceColors[idx] || BlocsEnlissage._defaultColors[idx % BlocsEnlissage._defaultColors.length];
-        // Retirer l'écouteur précédent et en attacher un nouveau
-        const handler = () => {
-          seg.style.background = sharedPicker.value;
-          BlocsEnlissage.setOccurrenceColor(idx, sharedPicker.value);
-        };
-        sharedPicker.oninput = handler;
-        sharedPicker.click();
+      inp.addEventListener('input', () => {
+        segRef.style.background = inp.value;
+        BlocsEnlissage.setOccurrenceColor(idx, inp.value);
       });
+      seg.appendChild(inp);
 
       band.appendChild(seg);
     });
