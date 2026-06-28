@@ -3,16 +3,16 @@
     "id": "mqxi44f8immm5",
     "date_creation": "2026-06-28T08:02:40.100Z",
     "projet": "Premier tissage - 8 sets de 40*60 cm Betty Briand",
-    "source_inspiration": "Série de sergé avec variations d'attachages",
-    "fil_chaine": "Lin/coton flammé",
-    "titrage_chaine_val": "8/2",
+    "source_inspiration": "SÃ©rie de sergÃ© avec variations d'attachages",
+    "fil_chaine": "Lin/coton flammÃ©",
+    "titrage_chaine_val": "",
     "titrage_chaine_sys": "Nm",
-    "titrage_chaine": "4000",
-    "fil_trame": "Lin/coton flammé",
-    "titrage_trame_val": "8/2",
+    "titrage_chaine": "",
+    "fil_trame": "Lin/coton flammÃ©",
+    "titrage_trame_val": "",
     "titrage_trame_sys": "Nm",
-    "titrage_trame": "4000",
-    "armure": "Sergé",
+    "titrage_trame": "",
+    "armure": "SergÃ©",
     "densite_chaine": "8",
     "densite_trame": "8",
     "peigne_dents": "4",
@@ -179,8 +179,8 @@
       },
       "total_lisses": ""
     },
-    "schema_data": "{\"cols\":60,\"rows\":16,\"shafts\":4,\"treadles\":6,\"enlacement\":[[true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false],[false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false],[false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false],[false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true]],\"attachage\":[[false,true,false,false,true,false],[false,true,true,false,false,true],[true,false,true,true,true,false],[true,false,false,true,true,false]],\"pedalage\":[[true,false,false,false,false,false],[false,true,false,false,false,false],[false,false,true,false,false,false],[false,false,false,true,false,false],[false,false,false,false,true,false],[false,false,false,false,false,true],[false,false,false,false,true,false],[false,false,false,true,false,false],[false,false,true,false,false,false],[false,true,false,false,false,false],[true,false,false,false,false,false],[false,false,false,false,false,false],[false,false,false,false,false,false],[false,false,false,false,false,false],[false,false,false,false,false,false],[false,false,false,false,false,false]]}",
+    "schema_data": "{\"cols\":60,\"rows\":16,\"shafts\":4,\"treadles\":6,\"enlissage\":[[true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false],[false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false],[false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false],[false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true]],\"attachage\":[[false,true,false,false,true,false],[false,true,true,false,false,true],[true,false,true,true,true,false],[true,false,false,true,true,false]],\"pedalage\":[[true,false,false,false,false,false],[false,true,false,false,false,false],[false,false,true,false,false,false],[false,false,false,true,false,false],[false,false,false,false,true,false],[false,false,false,false,false,true],[false,false,false,false,true,false],[false,false,false,true,false,false],[false,false,true,false,false,false],[false,true,false,false,false,false],[true,false,false,false,false,false],[false,false,false,false,false,false],[false,false,false,false,false,false],[false,false,false,false,false,false],[false,false,false,false,false,false],[false,false,false,false,false,false]]}",
     "schema_image": "",
-    "date_modification": "2026-06-28T08:08:54.870Z"
+    "date_modification": "2026-06-28T08:09:57.670Z"
   }
 ]
