@@ -748,7 +748,30 @@ async function deleteFiche() {
 }
 
 // ─── TABLEAU OURDISSAGE (formulaire) ────────────────────────
-const NB_OURDISSAGE_COLS = 16;
+let NB_OURDISSAGE_COLS = 16;
+
+// Génère le thead du tableau d'ourdissage
+function _renderOurdissageThead(cols) {
+  const thead = document.getElementById('ourdissage-thead');
+  if (!thead) return;
+  let ths = '<th>Couleur</th>';
+  for (let i = 1; i <= cols; i++) ths += `<th>${i}</th>`;
+  ths += '<th>=</th><th></th>';
+  thead.innerHTML = `<tr>${ths}</tr>`;
+}
+
+// Redimensionne le tableau (change le nombre de colonnes en conservant les données)
+function resizeOurdissage() {
+  const input = document.getElementById('ourdissage-nb-cols');
+  if (!input) return;
+  const newCols = Math.max(4, Math.min(48, parseInt(input.value) || 16));
+  input.value = newCols;
+  // Sauvegarder les données actuelles
+  const current = collectOurdissageData();
+  NB_OURDISSAGE_COLS = newCols;
+  _renderOurdissageThead(newCols);
+  initOurdissageForm(current);
+}
 
 // Crée une ligne du tableau d'ourdissage
 function _makeOurdissageRow(row, ri) {
@@ -805,6 +828,16 @@ function initOurdissageForm(data) {
     { couleur: 'Couleur 3', hex: '#cccccc', sequence: [], total: '' },
   ];
   const rows = data.length > 0 ? data : defaultRows;
+  // Adapter NB_OURDISSAGE_COLS au nombre de colonnes sauvegardées
+  if (data.length > 0) {
+    const maxSeq = Math.max(...data.map(r => (r.sequence || []).length), NB_OURDISSAGE_COLS);
+    if (maxSeq !== NB_OURDISSAGE_COLS) {
+      NB_OURDISSAGE_COLS = maxSeq;
+      const input = document.getElementById('ourdissage-nb-cols');
+      if (input) input.value = maxSeq;
+    }
+  }
+  _renderOurdissageThead(NB_OURDISSAGE_COLS);
   tbody.innerHTML = rows.map((row, ri) => _makeOurdissageRow(row, ri)).join('');
 }
 
