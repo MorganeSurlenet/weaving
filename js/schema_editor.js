@@ -1,8 +1,8 @@
-// ─── ÉDITEUR DE SCHÉMA (ENLAÇAGE / ATTACHAGE / PÉDALAGE) ────────────────────
+// ─── ÉDITEUR DE SCHÉMA (ENLISSAGE / ATTACHAGE / PÉDALAGE) ────────────────────
 
 const SchemaEditor = {
   // Données des 3 grilles : tableaux 2D de booléens
-  enlacement: [],  // [row][col] — rows=cadres, cols=fils
+  enlissage:  [],  // [row][col] — rows=cadres, cols=fils
   attachage:  [],  // [row][col] — rows=cadres, cols=pédales
   pedalage:   [],  // [row][col] — rows=duites, cols=pédales
 
@@ -40,8 +40,8 @@ const SchemaEditor = {
       }
       return g;
     };
-    // Enlaçage : cadres (lignes) × fils (colonnes)
-    this.enlacement = makeGrid(this.shafts, this.cols,     keepExisting ? this.enlacement : null);
+    // Enlissage : cadres (lignes) × fils (colonnes)
+    this.enlissage  = makeGrid(this.shafts, this.cols,     keepExisting ? this.enlissage  : null);
     // Attachage : cadres (lignes) × pédales (colonnes)
     this.attachage  = makeGrid(this.shafts, this.treadles, keepExisting ? this.attachage  : null);
     // Pédalage : duites (lignes) × pédales (colonnes)
@@ -49,8 +49,8 @@ const SchemaEditor = {
   },
 
   render() {
-    // Enlaçage : cadres × fils
-    this._renderGrid('grid-enlacement', this.enlacement, this.shafts, this.cols,     'enlacement');
+    // Enlissage : cadres × fils
+    this._renderGrid('grid-enlissage', this.enlissage, this.shafts, this.cols,     'enlissage');
     // Attachage : cadres × pédales
     this._renderGrid('grid-attachage',  this.attachage,  this.shafts, this.treadles, 'attachage');
     // Pédalage : duites × pédales
@@ -121,10 +121,10 @@ const SchemaEditor = {
     if (!data?.[r]) return;
 
     // Règles d'exclusivité :
-    // Enlaçage : une seule case noire PAR COLONNE (chaque fil = 1 cadre)
-    // Pédalage : une seule case noire PAR LIGNE (chaque duite = 1 pédale)
+    // Enlissage : une seule case noire PAR COLONNE (chaque fil = 1 cadre)
+    // Pédalage  : une seule case noire PAR LIGNE (chaque duite = 1 pédale)
     if (value) {
-      if (gridName === 'enlacement') {
+      if (gridName === 'enlissage') {
         // Effacer toute la colonne c
         for (let row = 0; row < this.shafts; row++) {
           data[row][c] = false;
@@ -139,12 +139,12 @@ const SchemaEditor = {
 
     data[r][c] = value;
 
-    // Re-render complet de la grille concernée pour reflet les effacements
-    const containerId = gridName === 'enlacement' ? 'grid-enlacement' :
-                        gridName === 'attachage'  ? 'grid-attachage'  : 'grid-pedalage';
-    const rows = gridName === 'enlacement' ? this.shafts :
+    // Re-render complet de la grille concernée
+    const containerId = gridName === 'enlissage'  ? 'grid-enlissage'  :
+                        gridName === 'attachage'   ? 'grid-attachage'  : 'grid-pedalage';
+    const rows = gridName === 'enlissage'  ? this.shafts :
                  gridName === 'attachage'  ? this.shafts : this.rows;
-    const cols = gridName === 'enlacement' ? this.cols :
+    const cols = gridName === 'enlissage'  ? this.cols :
                  gridName === 'attachage'  ? this.treadles : this.treadles;
     this._renderGrid(containerId, data, rows, cols, gridName);
     this.saveToHiddenField();
@@ -154,50 +154,90 @@ const SchemaEditor = {
     const field = document.getElementById('schema-data');
     if (!field) return;
     field.value = JSON.stringify({
-      cols: this.cols,
-      rows: this.rows,
-      shafts: this.shafts,
-      treadles: this.treadles,
-      enlacement: this.enlacement,
-      attachage:  this.attachage,
-      pedalage:   this.pedalage,
+      cols:      this.cols,
+      rows:      this.rows,
+      shafts:    this.shafts,
+      treadles:  this.treadles,
+      enlissage: this.enlissage,
+      attachage: this.attachage,
+      pedalage:  this.pedalage,
     });
     this.validateSchema();
   },
 
-  // Validation de l'attachage : chaque ligne et chaque colonne doit avoir
-  // au moins une case pleine ET au moins une case vide.
+  // ─── VALIDATION DES TROIS GRILLES ────────────────────────────────────────────
+  // Enlissage  : chaque LIGNE (cadre) doit avoir au moins 1 case pleine
+  //              chaque COLONNE (fil) doit avoir exactement 1 case pleine (règle d'exclusivité)
+  // Attachage  : chaque LIGNE (cadre) et chaque COLONNE (pédale) doit avoir
+  //              au moins 1 case pleine ET au moins 1 case vide
+  // Pédalage   : chaque LIGNE (duite) doit avoir exactement 1 case pleine (règle d'exclusivité)
   validateSchema() {
     const zone = document.getElementById('schema-validation');
     if (!zone) return;
 
     const warnings = [];
-    const att = this.attachage;
-    const nRows = this.shafts;    // cadres
-    const nCols = this.treadles;  // pédales
 
-    // Vérification par ligne (cadre)
-    for (let r = 0; r < nRows; r++) {
+    // ── Enlissage ──
+    const enl   = this.enlissage;
+    const nEnlR = this.shafts;  // cadres = lignes
+    const nEnlC = this.cols;    // fils   = colonnes
+
+    // Chaque ligne (cadre) doit avoir au moins 1 fil enlissé
+    for (let r = 0; r < nEnlR; r++) {
+      const filled = enl[r].filter(v => v).length;
+      if (filled === 0) {
+        warnings.push(`Enlissage — cadre ${r + 1} : aucun fil enlissé (ligne entièrement vide).`);
+      }
+    }
+    // Chaque colonne (fil) doit avoir exactement 1 case (déjà garanti par _toggle, mais on vérifie)
+    for (let c = 0; c < nEnlC; c++) {
+      const filled = enl.filter(row => row[c]).length;
+      if (filled === 0) {
+        warnings.push(`Enlissage — fil ${c + 1} : non enlissé (aucun cadre assigné).`);
+      } else if (filled > 1) {
+        warnings.push(`Enlissage — fil ${c + 1} : enlissé sur ${filled} cadres (1 seul autorisé).`);
+      }
+    }
+
+    // ── Attachage ──
+    const att   = this.attachage;
+    const nAttR = this.shafts;    // cadres  = lignes
+    const nAttC = this.treadles;  // pédales = colonnes
+
+    for (let r = 0; r < nAttR; r++) {
       const filled = att[r].filter(v => v).length;
       if (filled === 0) {
-        warnings.push(`Attachage — cadre ${r + 1} : aucune pédale assignée (ligne entièrement vide).`);
-      } else if (filled === nCols) {
-        warnings.push(`Attachage — cadre ${r + 1} : toutes les pédales sont assignées (le cadre sera toujours levé).`);
+        warnings.push(`Attachage — cadre ${r + 1} : aucune pédale assignée (ligne entièrement vide).`);
+      } else if (filled === nAttC) {
+        warnings.push(`Attachage — cadre ${r + 1} : toutes les pédales assignées (cadre toujours levé).`);
       }
     }
-
-    // Vérification par colonne (pédale)
-    for (let c = 0; c < nCols; c++) {
+    for (let c = 0; c < nAttC; c++) {
       const filled = att.filter(row => row[c]).length;
       if (filled === 0) {
-        warnings.push(`Attachage — pédale ${c + 1} : aucun cadre assigné (colonne entièrement vide).`);
-      } else if (filled === nRows) {
-        warnings.push(`Attachage — pédale ${c + 1} : tous les cadres sont assignés (tous les fils seront levés en même temps).`);
+        warnings.push(`Attachage — pédale ${c + 1} : aucun cadre assigné (colonne entièrement vide).`);
+      } else if (filled === nAttR) {
+        warnings.push(`Attachage — pédale ${c + 1} : tous les cadres assignés (tous les fils levés en même temps).`);
       }
     }
 
+    // ── Pédalage ──
+    const ped   = this.pedalage;
+    const nPedR = this.rows;      // duites  = lignes
+    const nPedC = this.treadles;  // pédales = colonnes
+
+    for (let r = 0; r < nPedR; r++) {
+      const filled = ped[r].filter(v => v).length;
+      if (filled === 0) {
+        warnings.push(`Pédalage — duite ${r + 1} : aucune pédale actionnée (ligne entièrement vide).`);
+      } else if (filled > 1) {
+        warnings.push(`Pédalage — duite ${r + 1} : ${filled} pédales actionnées simultanément (1 seule autorisée).`);
+      }
+    }
+
+    // ── Affichage ──
     if (warnings.length === 0) {
-      zone.innerHTML = '<div class="schema-valid">&#10003; Attachage valide — chaque cadre et chaque pédale ont au moins une case pleine et une case vide.</div>';
+      zone.innerHTML = '<div class="schema-valid">&#10003; Schéma valide — enlissage, attachage et pédalage respectent toutes les règles.</div>';
     } else {
       zone.innerHTML = warnings
         .map(w => `<div class="schema-warning">&#9888; ${w}</div>`)
@@ -213,7 +253,8 @@ const SchemaEditor = {
       this.rows     = d.rows     || 16;
       this.shafts   = d.shafts   || 4;
       this.treadles = d.treadles || 4;
-      this.enlacement = d.enlacement || [];
+      // Compatibilité ascendante : ancienne clé "enlacement" → "enlissage"
+      this.enlissage  = d.enlissage  || d.enlacement || [];
       this.attachage  = d.attachage  || [];
       this.pedalage   = d.pedalage   || [];
       // Sync les inputs
@@ -278,11 +319,12 @@ const SchemaEditor = {
     container.innerHTML = '';
     container.className = 'draft-container draft-readonly-wrapper';
 
-    // Enlaçage : colonne 1, lignes 1-2
+    // Enlissage : colonne 1
     const zoneEnl = document.createElement('div');
     zoneEnl.className = 'draft-zone-enlacement';
-    // Enlaçage : cadres × fils
-    makeReadOnlyGrid(zoneEnl, 'Enlaçage', d.enlacement, d.shafts, d.cols);
+    // Compatibilité ascendante
+    const enlData = d.enlissage || d.enlacement;
+    makeReadOnlyGrid(zoneEnl, 'Enlissage', enlData, d.shafts, d.cols);
     container.appendChild(zoneEnl);
 
     // Attachage : colonne 2, ligne 1
@@ -322,8 +364,8 @@ function toggleSchemaEditor() {
   } else {
     editorZone.style.display  = 'block';
     previewZone.style.display = 'none';
-    btn.textContent = 'Fermer l\'\u00e9diteur';
-    // Charger les donn\u00e9es existantes depuis le champ cach\u00e9
+    btn.textContent = 'Fermer l\'éditeur';
+    // Charger les données existantes depuis le champ caché
     const field = document.getElementById('schema-data');
     if (field && field.value) {
       SchemaEditor.loadFromData(field.value);
@@ -357,15 +399,15 @@ function updateSchemaPreview() {
   }
   try {
     const d = JSON.parse(raw);
-    // Vérifier si le schéma a des données
-    const hasData = d.enlacement?.some(row => row.some(v => v)) ||
+    // Compatibilité ascendante
+    const enlData = d.enlissage || d.enlacement;
+    const hasData = enlData?.some(row => row.some(v => v)) ||
                     d.attachage?.some(row => row.some(v => v)) ||
                     d.pedalage?.some(row => row.some(v => v));
     if (!hasData) {
       display.innerHTML = '<span style="color:var(--color-text-muted); font-size:0.85rem;">Schéma vide — cliquez sur "Modifier le schéma" pour le remplir.</span>';
       return;
     }
-    // Afficher le schéma en lecture seule
     display.innerHTML = '';
     SchemaEditor.renderReadOnly('schema-readonly-display', d);
   } catch(e) {
