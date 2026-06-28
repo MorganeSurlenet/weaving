@@ -30,144 +30,9 @@
     "notes": "",
     "ourdissage": [
       {
-        "hex": "#3986ea",
-        "couleur": "Bleu acier",
+        "hex": "#0e59aa",
+        "couleur": "Bloc A",
         "sequence": [
-          "12",
-          "",
-          "12",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "36",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          ""
-        ],
-        "total": "60"
-      },
-      {
-        "hex": "#d6ecff",
-        "couleur": "Bleu ciel",
-        "sequence": [
-          "",
-          "36",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "12",
-          "",
-          "12",
-          "",
-          "",
-          "",
-          "",
-          "",
-          ""
-        ],
-        "total": "60"
-      },
-      {
-        "hex": "#ffc2e5",
-        "couleur": "Rose",
-        "sequence": [
-          "",
-          "",
-          "",
-          "12",
-          "",
-          "12",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "36",
-          "",
-          "",
-          "",
-          ""
-        ],
-        "total": "60"
-      },
-      {
-        "hex": "#c10673",
-        "couleur": "Fushia",
-        "sequence": [
-          "",
-          "",
-          "",
-          "",
-          "36",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "12",
-          "",
-          "12",
-          "",
-          "",
-          ""
-        ],
-        "total": "60"
-      },
-      {
-        "hex": "#e6f99a",
-        "couleur": "Citron vert",
-        "sequence": [
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "12",
-          "",
-          "12",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "36",
-          ""
-        ],
-        "total": "60"
-      },
-      {
-        "hex": "#70aa64",
-        "couleur": "Vert lichen",
-        "sequence": [
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "",
-          "36",
-          "",
-          "",
           "",
           "",
           "",
@@ -177,7 +42,97 @@
           "",
           "12"
         ],
-        "total": "60"
+        "total": "24"
+      },
+      {
+        "hex": "#91e2fd",
+        "couleur": "Bloc B",
+        "sequence": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "36",
+          ""
+        ],
+        "total": "36"
+      },
+      {
+        "hex": "#16a085",
+        "couleur": "Bloc A",
+        "sequence": [
+          "",
+          "",
+          "",
+          "",
+          "12",
+          "",
+          "",
+          ""
+        ],
+        "total": "12"
+      },
+      {
+        "hex": "#f39c12",
+        "couleur": "Bloc B",
+        "sequence": [
+          "",
+          "",
+          "",
+          "12",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "total": "12"
+      },
+      {
+        "hex": "#2c3e50",
+        "couleur": "Bloc A",
+        "sequence": [
+          "",
+          "",
+          "12",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "total": "12"
+      },
+      {
+        "hex": "#4a90d9",
+        "couleur": "Bloc B",
+        "sequence": [
+          "",
+          "12",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "total": "12"
+      },
+      {
+        "hex": "#e67e22",
+        "couleur": "Bloc A",
+        "sequence": [
+          "12",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "total": "12"
       }
     ],
     "lisses": {
@@ -263,9 +218,9 @@
       },
       "total_lisses": ""
     },
-    "schema_data": "{\"cols\":60,\"rows\":16,\"shafts\":4,\"treadles\":4,\"enlissage\":[[true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false],[false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false],[false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false],[false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true]],\"attachage\":[[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false]],\"pedalage\":[[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false]],\"blocs\":[{\"name\":\"A\",\"pattern\":[[true,false,false,false,true,false,false,false,true,false,false,false],[false,true,false,false,false,true,false,false,false,true,false,false],[false,false,true,false,false,false,true,false,false,false,true,false],[false,false,false,true,false,false,false,true,false,false,false,true]],\"size\":12,\"color\":\"#4a90d9\"},{\"name\":\"B\",\"pattern\":[[false,true,false,false,false,true,false,false,false,true,false,false],[true,false,false,false,true,false,false,false,true,false,false,false],[false,false,false,true,false,false,false,true,false,false,false,true],[false,false,true,false,false,false,true,false,false,false,true,false]],\"size\":12,\"color\":\"#e67e22\"}],\"blocsSequence\":[\"A\",\"B\",\"A\",\"B\",\"A\"]}",
+    "schema_data": "{\"cols\":120,\"rows\":16,\"shafts\":4,\"treadles\":4,\"enlissage\":[[true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false],[false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false],[false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false],[false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true]],\"attachage\":[[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false]],\"pedalage\":[[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false],[false,false,false,false]],\"blocs\":[{\"name\":\"A\",\"pattern\":[[true,false,false,false,true,false,false,false,true,false,false,false],[false,true,false,false,false,true,false,false,false,true,false,false],[false,false,true,false,false,false,true,false,false,false,true,false],[false,false,false,true,false,false,false,true,false,false,false,true]],\"size\":12,\"color\":\"#4a90d9\"},{\"name\":\"B\",\"pattern\":[[false,true,false,false,false,true,false,false,false,true,false,false],[true,false,false,false,true,false,false,false,true,false,false,false],[false,false,false,true,false,false,false,true,false,false,false,true],[false,false,true,false,false,false,true,false,false,false,true,false]],\"size\":12,\"color\":\"#e67e22\"}],\"blocsSequence\":[\"A\",\"B\",\"A\",\"B\",\"A\",\"A\",\"B\",\"A\",\"B\",\"A\"],\"blocsColors\":[\"#0e59aa\",\"#91e2fd\",\"#91e2fd\",\"#91e2fd\",\"#0e59aa\",\"#c62a7d\",\"#fbbcdd\",\"#fbbcdd\",\"#fbbcdd\",\"#e67e22\"]}",
     "schema_image": "",
-    "date_modification": "2026-06-28T08:56:46.045Z",
+    "date_modification": "2026-06-28T10:36:32.240Z",
     "titrage_chaine_mode": "nm",
     "titrage_chaine_mkg_direct": "",
     "titrage_trame_mode": "nm",
