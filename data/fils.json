@@ -10,5 +10,17 @@
     "nm_calc": 6000,
     "prix_kg": 35,
     "notes": "Fil exemple"
+  },
+  {
+    "marque": "eee",
+    "reference": "eee",
+    "matiere": "Coton",
+    "coloris": "eee",
+    "couleur": "#cccccc",
+    "nm": "5/2",
+    "prix_kg": 50,
+    "notes": "",
+    "id": "fil_mqxfyqpb",
+    "nm_calc": 2500
   }
 ]
