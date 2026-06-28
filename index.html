@@ -491,6 +491,31 @@
               </div>
             </div>
 
+            <!-- Blocs A/B d'enlissage -->
+            <div id="blocs-enlissage-panel" style="background:var(--color-bg-card,#f8f6f2); border:1px solid var(--color-border-light,#e0d8cc); border-radius:6px; padding:0.75rem; margin-bottom:0.75rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                <strong style="font-size:0.85rem;">Blocs d'enlissage</strong>
+                <button type="button" class="btn btn-sm" onclick="toggleBlocsPanel()" id="btn-blocs-toggle" style="font-size:0.7rem;">Masquer</button>
+              </div>
+              <div id="blocs-enlissage-body">
+                <p style="font-size:0.78rem; color:var(--color-text-muted); margin:0 0 0.5rem;">Définissez un ou plusieurs blocs (A, B, C…), puis appliquez-les en séquence pour remplir automatiquement l'enlissage.</p>
+                <div id="blocs-list" style="display:flex; flex-direction:column; gap:0.4rem; margin-bottom:0.5rem;"></div>
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+                  <button type="button" class="btn btn-sm" onclick="addBlocDefinition()">+ Nouveau bloc</button>
+                </div>
+                <div style="margin-top:0.6rem; border-top:1px solid var(--color-border-light,#e0d8cc); padding-top:0.5rem;">
+                  <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.3rem;">Séquence de répétition :</label>
+                  <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                    <input type="text" id="blocs-sequence" placeholder="Ex : A B A B ou A A B A A B" style="flex:1; min-width:140px; font-family:monospace;">
+                    <input type="number" id="blocs-repeat" value="1" min="1" max="50" style="width:55px;" title="Nombre de fois que la séquence est répétée">
+                    <span style="font-size:0.78rem; color:var(--color-text-muted);">répétition(s)</span>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="applyBlocsToEnlissage()">Appliquer</button>
+                  </div>
+                  <div style="font-size:0.75rem; color:var(--color-text-muted); margin-top:0.3rem;">Le résultat écrase l'enlissage actuel. Ajustez ensuite manuellement si besoin.</div>
+                </div>
+              </div>
+            </div>
+
             <!-- Conteneur du draft -->
             <div class="draft-scroll-wrapper">
             <div class="draft-container" id="draft-container">
