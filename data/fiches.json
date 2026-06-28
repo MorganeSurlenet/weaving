@@ -25,8 +25,8 @@
     "long_ajout_retrait_pct": "5",
     "franges": "6",
     "nb_articles": "8",
-    "prix_chaine_kg": "",
-    "prix_trame_kg": "",
+    "prix_chaine_kg": "50",
+    "prix_trame_kg": "50",
     "notes": "",
     "ourdissage": [
       {
@@ -181,6 +181,6 @@
     },
     "schema_data": "{\"cols\":60,\"rows\":16,\"shafts\":4,\"treadles\":6,\"enlissage\":[[true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false],[false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false],[false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false],[false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true,false,false,true,false,false,false,true,false,false,false,true,false,false,false,false,true,false,false,false,true,false,false,false,true]],\"attachage\":[[false,true,false,false,true,false],[false,true,true,false,false,true],[true,false,true,true,true,false],[true,false,false,true,true,false]],\"pedalage\":[[true,false,false,false,false,false],[false,true,false,false,false,false],[false,false,true,false,false,false],[false,false,false,true,false,false],[false,false,false,false,true,false],[false,false,false,false,false,true],[false,false,false,false,true,false],[false,false,false,true,false,false],[false,false,true,false,false,false],[false,true,false,false,false,false],[true,false,false,false,false,false],[false,false,false,false,false,false],[false,false,false,false,false,false],[false,false,false,false,false,false],[false,false,false,false,false,false],[false,false,false,false,false,false]]}",
     "schema_image": "",
-    "date_modification": "2026-06-28T08:10:13.268Z"
+    "date_modification": "2026-06-28T08:12:05.199Z"
   }
 ]
