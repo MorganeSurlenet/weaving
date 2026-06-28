@@ -279,9 +279,14 @@ function toggleSchemaEditor() {
   } else {
     editorZone.style.display  = 'block';
     previewZone.style.display = 'none';
-    btn.textContent = 'Fermer l\'éditeur';
-    // Initialiser l'éditeur si pas encore fait
-    SchemaEditor.init();
+    btn.textContent = 'Fermer l\'\u00e9diteur';
+    // Charger les donn\u00e9es existantes depuis le champ cach\u00e9
+    const field = document.getElementById('schema-data');
+    if (field && field.value) {
+      SchemaEditor.loadFromData(field.value);
+    } else {
+      SchemaEditor.init();
+    }
   }
 }
 
