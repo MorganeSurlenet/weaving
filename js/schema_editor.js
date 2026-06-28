@@ -56,6 +56,9 @@ const SchemaEditor = {
     this._renderGrid('grid-attachage',  this.attachage,  this.shafts, this.treadles, 'attachage');
     // Pédalage : duites × pédales
     this._renderGrid('grid-pedalage',   this.pedalage,   this.rows,   this.treadles, 'pedalage');
+    // Bande couleur trame
+    TrameBand.resize(this.rows);
+    TrameBand.render();
   },
 
   _renderGrid(containerId, data, rows, cols, gridName) {
@@ -167,6 +170,7 @@ const SchemaEditor = {
       blocs:            BlocsEnlissage.blocs,
       blocsSequence:    BlocsEnlissage._lastSequence || [],
       blocsColors:      BlocsEnlissage.occurrenceColors || [],
+      trameColors:      TrameBand.rowColors || [],
     });
     this.validateSchema();
   },
@@ -284,7 +288,15 @@ const SchemaEditor = {
       setVal('schema-rows',     this.rows);
       setVal('schema-shafts',   this.shafts);
       setVal('schema-treadles', this.treadles);
+      // Restaurer les couleurs de trame
+      if (d.trameColors && d.trameColors.length > 0) {
+        TrameBand.rowColors = d.trameColors;
+      } else {
+        TrameBand.rowColors = Array.from({ length: this.rows }, (_, i) =>
+          TrameBand._defaultColors[i % TrameBand._defaultColors.length]);
+      }
       this.render();
+      TrameBand.render();
       this.saveToHiddenField();
       this.validateSchema();
     } catch(e) { console.warn('Schema load error', e); }
@@ -407,6 +419,37 @@ const SchemaEditor = {
     const zonePed = document.createElement('div');
     zonePed.className = 'draft-zone-pedalage';
     makeReadOnlyGrid(zonePed, 'Pédalage', d.pedalage, d.rows, d.treadles);
+
+    // Bande couleur trame à droite du pédalage
+    if (d.trameColors && d.trameColors.length > 0) {
+      const pedGrid = zonePed.querySelector('div[style*="grid"]') || zonePed.lastElementChild;
+      const cellSize = d.treadles > 32 ? 8 : d.treadles > 20 ? 10 : 12;
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'display:flex; align-items:flex-start; gap:2px;';
+      // Déplacer la grille dans le wrapper
+      const gridEl = zonePed.querySelector('.draft-zone-readonly');
+      if (gridEl) {
+        wrapper.appendChild(gridEl);
+      } else {
+        // fallback : ré-envelopper le contenu
+        while (zonePed.lastChild && zonePed.lastChild !== zonePed.firstChild) {
+          wrapper.prepend(zonePed.lastChild);
+        }
+      }
+      const trameBandRo = document.createElement('div');
+      trameBandRo.style.cssText = 'display:flex; flex-direction:column; gap:1px; margin-top:' + (cellSize + 4) + 'px;';
+      const rows = d.rows || d.trameColors.length;
+      for (let r = 0; r < rows; r++) {
+        const color = d.trameColors[r];
+        if (!color) continue;
+        const seg = document.createElement('div');
+        seg.style.cssText = `width:${cellSize}px; height:${cellSize}px; background:${color}; border-radius:1px; flex-shrink:0;`;
+        trameBandRo.appendChild(seg);
+      }
+      wrapper.appendChild(trameBandRo);
+      zonePed.appendChild(wrapper);
+    }
+
     container.appendChild(zonePed);
   }
 };
@@ -928,3 +971,117 @@ function updateSchemaPreview() {
     display.innerHTML = '<span style="color:var(--color-text-muted); font-size:0.85rem;">Schéma non lisible.</span>';
   }
 }
+
+// ─── COULEURS DE TRAME ────────────────────────────────────────────────────────
+// Une couleur par duite (ligne du pédalage), affichée à droite de la grille
+const TrameBand = {
+  rowColors: [],   // array[rowIndex] = hex string
+  _defaultColors: ['#4a7c9e','#c0392b','#27ae60','#8e44ad','#e67e22','#16a085','#d35400','#2c3e50'],
+
+  // Initialiser ou redimensionner le tableau de couleurs sans re-render
+  resize(rows) {
+    const prev = this.rowColors.slice();
+    this.rowColors = Array.from({ length: rows }, (_, i) => prev[i] || this._defaultColors[i % this._defaultColors.length]);
+    // render() est appelé par SchemaEditor.render() juste après
+  },
+
+  setColor(rowIdx, color) {
+    this.rowColors[rowIdx] = color;
+    this.render();
+    SchemaEditor.saveToHiddenField();
+    updateSchemaPreview();
+  },
+
+  render() {
+    const band = document.getElementById('trame-band');
+    if (!band) return;
+    const rows = SchemaEditor.rows;
+    const cellSize = rows > 32 ? 10 : rows > 20 ? 12 : 14;
+    band.innerHTML = '';
+
+    for (let r = 0; r < rows; r++) {
+      const color = this.rowColors[r] || this._defaultColors[r % this._defaultColors.length];
+
+      const seg = document.createElement('div');
+      seg.style.cssText = `width:${cellSize}px; height:${cellSize}px; background:${color}; border-radius:2px; flex-shrink:0; position:relative; cursor:pointer;`;
+      seg.title = `Duite ${r + 1} — cliquer pour changer la couleur`;
+
+      const idx = r;
+      seg.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('._trame-popover').forEach(p => p.remove());
+
+        const usedColors = [...new Set(this.rowColors)];
+        const pop = document.createElement('div');
+        pop.className = '_trame-popover';
+        pop.style.cssText = 'position:fixed; z-index:9999; background:#fff; border:1px solid #ccc; border-radius:6px; padding:8px; box-shadow:0 4px 16px rgba(0,0,0,0.18); display:flex; flex-direction:column; gap:6px; min-width:160px;';
+
+        const title = document.createElement('div');
+        title.style.cssText = 'font-size:0.75rem; font-weight:600; color:#555; margin-bottom:2px;';
+        title.textContent = `Couleur — Duite ${r + 1}`;
+        pop.appendChild(title);
+
+        if (usedColors.length > 0) {
+          const palLbl = document.createElement('div');
+          palLbl.style.cssText = 'font-size:0.7rem; color:#888;';
+          palLbl.textContent = 'Couleurs existantes :';
+          pop.appendChild(palLbl);
+
+          const pal = document.createElement('div');
+          pal.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px;';
+          usedColors.forEach(c => {
+            const swatch = document.createElement('div');
+            swatch.style.cssText = `width:22px; height:22px; background:${c}; border-radius:3px; cursor:pointer; border:2px solid ${c === color ? '#333' : 'transparent'}; box-sizing:border-box;`;
+            swatch.title = c;
+            swatch.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              TrameBand.setColor(idx, c);
+              pop.remove();
+            });
+            pal.appendChild(swatch);
+          });
+          pop.appendChild(pal);
+        }
+
+        const pickerRow = document.createElement('div');
+        pickerRow.style.cssText = 'display:flex; align-items:center; gap:6px; margin-top:2px;';
+        const pickerLbl = document.createElement('label');
+        pickerLbl.style.cssText = 'font-size:0.75rem; color:#555; cursor:pointer; display:flex; align-items:center; gap:4px;';
+        pickerLbl.textContent = 'Autre couleur\u2026';
+        const pickerInp = document.createElement('input');
+        pickerInp.type = 'color';
+        pickerInp.value = color;
+        pickerInp.style.cssText = 'width:28px; height:24px; padding:0; border:none; cursor:pointer; border-radius:3px;';
+        pickerInp.addEventListener('input', () => {
+          seg.style.background = pickerInp.value;
+          TrameBand.setColor(idx, pickerInp.value);
+        });
+        pickerInp.addEventListener('change', () => { pop.remove(); });
+        pickerLbl.appendChild(pickerInp);
+        pickerRow.appendChild(pickerLbl);
+        pop.appendChild(pickerRow);
+
+        document.body.appendChild(pop);
+        const rect = seg.getBoundingClientRect();
+        let left = rect.right + 4;
+        let top  = rect.top;
+        if (left + pop.offsetWidth > window.innerWidth - 8) left = rect.left - pop.offsetWidth - 4;
+        if (top + pop.offsetHeight > window.innerHeight - 8) top = window.innerHeight - pop.offsetHeight - 8;
+        pop.style.left = left + 'px';
+        pop.style.top  = top  + 'px';
+
+        setTimeout(() => {
+          const closeHandler = (ev) => {
+            if (!pop.contains(ev.target)) {
+              pop.remove();
+              document.removeEventListener('mousedown', closeHandler);
+            }
+          };
+          document.addEventListener('mousedown', closeHandler);
+        }, 100);
+      });
+
+      band.appendChild(seg);
+    }
+  }
+};
