@@ -794,6 +794,31 @@ textarea { resize: vertical; min-height: 80px; }
   border-color: #2c2a27;
 }
 
+/* ===== VALIDATION SCHÉMA ===== */
+.schema-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: #8b4513;
+  background: #fff4e6;
+  border: 1px solid #f5c07a;
+  border-radius: var(--radius);
+  padding: 0.4rem 0.7rem;
+  margin-bottom: 0.3rem;
+  line-height: 1.4;
+}
+
+.schema-valid {
+  font-size: 0.8rem;
+  color: #3a6b35;
+  background: #edf7ec;
+  border: 1px solid #a8d5a2;
+  border-radius: var(--radius);
+  padding: 0.4rem 0.7rem;
+  line-height: 1.4;
+}
+
 /* ===== BIBLIOTHÈQUE DE FILS ===== */
 .fils-group {
   margin-bottom: 1.5rem;
