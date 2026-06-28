@@ -365,25 +365,43 @@ function calcRecapMatieres(f) {
     });
   }
 
-  // ── Trame : depuis les couleurs de trame du schéma ──
+  // ── Trame : depuis les blocs de trame du schéma ──
   const larg_peigne = calcLargPeigne(f); // en cm
   const mkg_trame = f.titrage_trame ? parseFloat(f.titrage_trame) : null;
   if (f.schema_data) {
     try {
       const sd = typeof f.schema_data === 'string' ? JSON.parse(f.schema_data) : f.schema_data;
-      if (sd.trameColors && sd.trameColors.length > 0 && larg_peigne) {
-        // Regrouper les duites consécutives de même couleur
-        const groups = [];
-        sd.trameColors.forEach(c => {
-          const last = groups[groups.length - 1];
-          if (last && last.hex === c) { last.count++; }
-          else { groups.push({ hex: c, count: 1 }); }
-        });
+      const trameRows = sd.rows || 0;
+      if (trameRows > 0 && larg_peigne) {
+        // Calculer la couleur effective de chaque duite
+        const trBlocMap = {};
+        (sd.trameBlocs || []).forEach(b => { trBlocMap[b.name] = b; });
+        const trSeq = sd.trameSequence || [];
+        const trOverrides = sd.trameRowOverrides || {};
+        const trDefaults = ['#4a7c9e','#c0392b','#27ae60','#8e44ad','#e67e22','#16a085','#d35400','#2c3e50'];
+        const rowColors = [];
+        for (let r = 0; r < trameRows; r++) {
+          if (trOverrides[r]) { rowColors.push(trOverrides[r]); continue; }
+          let found = null, row = 0;
+          for (const t of trSeq) {
+            const bloc = trBlocMap[t];
+            if (!bloc) continue;
+            const bSize = bloc.size || bloc.colors.length || 2;
+            if (r >= row && r < row + bSize) {
+              found = bloc.colors[r - row] || trDefaults[(r - row) % trDefaults.length];
+              break;
+            }
+            row += bSize;
+          }
+          // Compatibilité ancienne clé trameColors
+          if (!found && sd.trameColors && sd.trameColors[r]) found = sd.trameColors[r];
+          rowColors.push(found || trDefaults[r % trDefaults.length]);
+        }
         // Agréger par couleur unique
         const colorMap = {};
-        groups.forEach(g => {
-          if (!colorMap[g.hex]) colorMap[g.hex] = { hex: g.hex, count: 0 };
-          colorMap[g.hex].count += g.count;
+        rowColors.forEach(c => {
+          if (!colorMap[c]) colorMap[c] = { hex: c, count: 0 };
+          colorMap[c].count++;
         });
         Object.values(colorMap).forEach(g => {
           const longTotale = g.count * (larg_peigne / 100); // cm → m
