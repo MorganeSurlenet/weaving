@@ -466,6 +466,9 @@ const BlocsEnlissage = {
     this.occurrenceColors[idx] = color;
     this._applyColorsToGrid();
     this.renderBand();
+    // Sauvegarder dans le champ caché et mettre à jour la préview
+    SchemaEditor.saveToHiddenField();
+    updateSchemaPreview();
     // Synchroniser le tableau d'ourdissage
     if (this._lastSequence && this._lastSequence.length) {
       const blocMap = {};
