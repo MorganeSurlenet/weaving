@@ -889,25 +889,41 @@ function resizeOurdissage() {
   initOurdissageForm(current);
 }
 
-// Synchronise le tableau d'ourdissage depuis la séquence de blocs d'enlissage
-// Une ligne par couleur unique ; chaque colonne = un groupe d'occurrences consécutives de même couleur
-// L'ordre est de droite à gauche : premier groupe à droite
-function syncOurdissageFromEnlissage(fullSeq, blocMap, occurrenceColors, defaultColors) {
-  if (!fullSeq || fullSeq.length === 0) return;
+// Synchronise le tableau d'ourdissage depuis BlocsEnlissage (modèle : colors[] par fil + colOverrides).
+// Groupe les fils CONSECUTIFS de même couleur en colonnes distinctes.
+// L'ordre des colonnes est de gauche à droite (groupe 0 = colonne 0).
+function syncOurdissageFromEnlissage() {
+  if (!BlocsEnlissage || !BlocsEnlissage._lastSequence || !BlocsEnlissage._lastSequence.length) return;
 
-  // Étape 1 : construire les groupes consécutifs de même couleur
-  // Un groupe = { color, label, nbFils } pour des occurrences consécutives de même couleur
-  const groups = [];
-  fullSeq.forEach((t, i) => {
+  const fullSeq  = BlocsEnlissage._lastSequence;
+  const blocMap  = {};
+  BlocsEnlissage.blocs.forEach(b => { blocMap[b.name] = b; });
+  const defaults = BlocsEnlissage._defaultColors;
+
+  // Étape 1 : construire la liste des fils avec leur couleur effective (override > bloc > défaut)
+  const filColors = []; // [{color, blocName}]
+  let col = 0;
+  fullSeq.forEach(t => {
     const bloc = blocMap[t];
     if (!bloc) return;
-    const nbFils = bloc.size || bloc.pattern[0]?.length || 4;
-    const color  = occurrenceColors[i] || defaultColors[i % defaultColors.length];
-    const last   = groups[groups.length - 1];
+    const bSize = bloc.size || bloc.colors?.length || 4;
+    for (let c = 0; c < bSize; c++) {
+      const override   = BlocsEnlissage.colOverrides?.[col + c];
+      const stepColor  = bloc.colors?.[c];
+      const color      = override || stepColor || defaults[(col + c) % defaults.length];
+      filColors.push({ color, blocName: t });
+    }
+    col += bSize;
+  });
+
+  // Étape 2 : grouper les fils CONSÉCUTIFS de même couleur
+  const groups = []; // [{color, nbFils, label}]
+  filColors.forEach(({ color, blocName }) => {
+    const last = groups[groups.length - 1];
     if (last && last.color === color) {
-      last.nbFils += nbFils;
+      last.nbFils++;
     } else {
-      groups.push({ color, label: `Bloc ${t}`, nbFils });
+      groups.push({ color, nbFils: 1, label: `Bloc ${blocName}` });
     }
   });
 
@@ -921,12 +937,10 @@ function syncOurdissageFromEnlissage(fullSeq, blocMap, occurrenceColors, default
     if (inp) inp.value = nbCols;
   }
 
-  // Étape 2 : construire une ligne par couleur unique
+  // Étape 3 : construire une ligne par couleur unique
   // sequence[colIdx] = nbFils si ce groupe appartient à cette couleur, sinon ''
-  // Colonnes indexées de droite à gauche : groupe 0 = colonne la plus à droite
   const colorMap = {}; // hex -> { couleur, hex, sequence[] }
   groups.forEach((g, gi) => {
-    const colIdx = gi; // gauche à droite : groupe 0 = colonne 0 (inverse de l'enlissage)
     if (!colorMap[g.color]) {
       colorMap[g.color] = {
         couleur: g.label,
@@ -934,13 +948,12 @@ function syncOurdissageFromEnlissage(fullSeq, blocMap, occurrenceColors, default
         sequence: Array(nbCols).fill('')
       };
     }
-    colorMap[g.color].sequence[colIdx] = g.nbFils.toString();
+    colorMap[g.color].sequence[gi] = g.nbFils.toString();
   });
 
   const newRows = Object.values(colorMap);
-
   initOurdissageForm(newRows);
-  showToast('Tableau d\'ourdissage synchronisé depuis l\'enlissage.', 'info');
+  showToast('Tableau d\'ourdissage synchronisé.', 'info');
 }
 
 // Crée une ligne du tableau d'ourdissage
