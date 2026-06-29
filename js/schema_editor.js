@@ -170,9 +170,9 @@ const SchemaEditor = {
       blocsSequence:    BlocsEnlissage._lastSequence || [],
       blocsColors:      BlocsEnlissage.occurrenceColors || [],
       // Blocs de trame
-      trameBlocs:        BlocsTrame.blocs,
-      trameSequence:     BlocsTrame._lastSequence || [],
-      trameRowOverrides: BlocsTrame.rowOverrides || {},
+      trameBlocs:             BlocsTrame.blocs,
+      trameSequence:          BlocsTrame._lastSequence || [],
+      trameOccurrenceColors:  BlocsTrame.occurrenceColors || [],
     });
     this.validateSchema();
   },
@@ -294,21 +294,13 @@ const SchemaEditor = {
       if (d.trameBlocs && d.trameBlocs.length > 0) {
         BlocsTrame.blocs = d.trameBlocs;
         BlocsTrame._lastSequence = d.trameSequence || [];
-        BlocsTrame.rowOverrides = d.trameRowOverrides || {};
+        BlocsTrame.occurrenceColors = d.trameOccurrenceColors || [];
         BlocsTrame.render();
         const trSeqInput = document.getElementById('trame-sequence');
         if (trSeqInput && d.trameSequence && d.trameSequence.length > 0) {
-          // Reconstruire la séquence unique (sans répétitions)
-          const uniqueSeq = [];
-          let prev = null;
-          for (const t of d.trameSequence) {
-            if (t !== prev) { uniqueSeq.push(t); prev = t; }
-          }
-          trSeqInput.value = [...new Set(d.trameSequence)].join(' ');
+          const uniqueSeq = [...new Set(d.trameSequence)];
+          trSeqInput.value = uniqueSeq.join(' ');
         }
-      } else if (d.trameColors && d.trameColors.length > 0) {
-        // Compatibilité ascendante : ancienne clé trameColors → rowOverrides
-        d.trameColors.forEach((c, i) => { BlocsTrame.rowOverrides[i] = c; });
       }
       this.render();
       BlocsTrame.renderBand();
@@ -443,26 +435,21 @@ const SchemaEditor = {
       const trBlocMap = {};
       (d.trameBlocs || []).forEach(b => { trBlocMap[b.name] = b; });
       const trSeq = d.trameSequence || [];
-      const trOverrides = d.trameRowOverrides || {};
+      const trOccColors = d.trameOccurrenceColors || [];
       const trDefaults = ['#4a7c9e','#c0392b','#27ae60','#8e44ad','#e67e22','#16a085','#d35400','#2c3e50'];
+      // Construire la map ligne → couleur depuis les occurrences
+      const trRowMap = {};
+      let rowIdx = 0;
+      trSeq.forEach((t, i) => {
+        const bloc = trBlocMap[t];
+        if (!bloc) return;
+        const bSize = bloc.size || bloc.pattern?.[0]?.length || 4;
+        const color = trOccColors[i] || trDefaults[i % trDefaults.length];
+        for (let r = 0; r < bSize; r++) trRowMap[rowIdx + r] = color;
+        rowIdx += bSize;
+      });
       for (let r = 0; r < trameRows; r++) {
-        if (trOverrides[r]) { trameRowColors.push(trOverrides[r]); continue; }
-        // Chercher dans la séquence
-        let found = null;
-        let row = 0;
-        for (const t of trSeq) {
-          const bloc = trBlocMap[t];
-          if (!bloc) continue;
-          const bSize = bloc.size || bloc.colors.length || 2;
-          if (r >= row && r < row + bSize) {
-            found = bloc.colors[r - row] || trDefaults[(r - row) % trDefaults.length];
-            break;
-          }
-          row += bSize;
-        }
-        // Compatibilité ancienne clé trameColors
-        if (!found && d.trameColors && d.trameColors[r]) found = d.trameColors[r];
-        trameRowColors.push(found || trDefaults[r % trDefaults.length]);
+        trameRowColors.push(trRowMap[r] || trDefaults[r % trDefaults.length]);
       }
     }
     if (trameRowColors.length > 0) {
@@ -1022,15 +1009,12 @@ function toggleBlocsTramePanel() {
 }
 
 // ─── BLOCS DE TRAME ──────────────────────────────────────────────────────────
-// Système de blocs identique à BlocsEnlissage pour la trame.
-// Chaque bloc définit une séquence de couleurs (une par duite du bloc).
-// rowOverrides[r] = couleur individuelle (prioritaire sur le bloc, modifiable au clic).
+// Système identique à BlocsEnlissage, adapté à la trame.
+// Chaque bloc : { name, pattern[][], size }  (rows=pédales, cols=nb duites du bloc)
+// occurrenceColors[i] = couleur de la i-ème occurrence dans la séquence complète
 const BlocsTrame = {
-  blocs: [],           // [{name, colors:[hex,...], size}]
-  _lastSequence: [],   // séquence complète après applySequence
-  rowOverrides: {},    // {rowIndex: hex} — couleurs individuelles
-
-  _defaultColors: ['#4a7c9e','#c0392b','#27ae60','#8e44ad','#e67e22','#16a085','#d35400','#2c3e50'],
+  blocs: [],
+  _nextName: 65,
 
   _nextLetter() {
     const used = new Set(this.blocs.map(b => b.name));
@@ -1039,48 +1023,170 @@ const BlocsTrame = {
     return String.fromCharCode(code);
   },
 
-  // Palette commune : toutes les couleurs utilisées dans les blocs + overrides
-  _allColors() {
-    const set = new Set();
-    this.blocs.forEach(b => (b.colors || []).forEach(c => { if(c) set.add(c); }));
-    Object.values(this.rowOverrides).forEach(c => { if(c) set.add(c); });
-    // Ajouter aussi les couleurs des blocs enlissage pour la palette partagée
-    if (typeof BlocsEnlissage !== 'undefined') {
-      (BlocsEnlissage.occurrenceColors || []).forEach(c => { if(c) set.add(c); });
-    }
-    return [...set];
-  },
+  _defaultColors: ['#4a7c9e','#c0392b','#27ae60','#8e44ad','#e67e22','#16a085','#d35400','#2c3e50'],
 
-  // Calcule la couleur effective d'une duite (override > bloc > défaut)
-  _colorForRow(r) {
-    if (this.rowOverrides[r]) return this.rowOverrides[r];
-    // Chercher dans la séquence
-    if (this._lastSequence && this._lastSequence.length) {
-      const blocMap = {};
-      this.blocs.forEach(b => { blocMap[b.name] = b; });
-      let row = 0;
-      for (const t of this._lastSequence) {
-        const bloc = blocMap[t];
-        if (!bloc) continue;
-        const bSize = bloc.size || bloc.colors.length || 2;
-        if (r >= row && r < row + bSize) {
-          return bloc.colors[r - row] || this._defaultColors[(r - row) % this._defaultColors.length];
-        }
-        row += bSize;
-      }
-    }
-    return this._defaultColors[r % this._defaultColors.length];
-  },
+  occurrenceColors: [],
 
   add() {
     const name = this._nextLetter();
-    const size = 2;
-    const colors = [
-      this._defaultColors[this.blocs.length % this._defaultColors.length],
-      this._defaultColors[(this.blocs.length + 1) % this._defaultColors.length]
-    ];
-    this.blocs.push({ name, colors, size });
+    const treadles = SchemaEditor.treadles;
+    const size = 4;
+    const pattern = Array.from({length: treadles}, () => Array(size).fill(false));
+    this.blocs.push({ name, pattern, size });
     this.render();
+  },
+
+  setOccurrenceColor(idx, color) {
+    this.occurrenceColors[idx] = color;
+    this._applyColorsToGrid();
+    this.renderBand();
+    SchemaEditor.saveToHiddenField();
+    updateSchemaPreview();
+  },
+
+  // Bande colorée à droite du pédalage (segments par occurrence)
+  renderBand() {
+    const band = document.getElementById('trame-band');
+    if (!band || !this._lastSequence || !this._lastSequence.length) return;
+    const cellSize = SchemaEditor.rows > 32 ? 10 : SchemaEditor.rows > 20 ? 12 : 14;
+    const blocMap = {};
+    this.blocs.forEach(b => { blocMap[b.name] = b; });
+    band.innerHTML = '';
+    band.style.gap = '1px';
+
+    const usedColors = [...new Set(
+      this._lastSequence.map((_, i) => this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length])
+    )];
+
+    this._lastSequence.forEach((t, i) => {
+      const bloc = blocMap[t];
+      if (!bloc) return;
+      const bSize = bloc.size || bloc.pattern[0]?.length || 4;
+      const color = this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length];
+      const segH = bSize * cellSize + (bSize - 1);
+
+      const seg = document.createElement('div');
+      seg.title = `Cliquer pour changer la couleur (occurrence ${i + 1} — Bloc ${t})`;
+      seg.style.cssText = `width:20px; height:${segH}px; background:${color}; border-radius:2px; flex-shrink:0; position:relative; cursor:pointer;`;
+
+      const lbl = document.createElement('span');
+      lbl.style.cssText = 'position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:#fff; text-shadow:0 0 2px rgba(0,0,0,0.6); pointer-events:none; z-index:1;';
+      lbl.textContent = bloc.name;
+      seg.appendChild(lbl);
+
+      const idx = i;
+      seg.addEventListener('click', (e) => {
+        e.stopPropagation();
+        document.querySelectorAll('._trame-popover').forEach(p => p.remove());
+
+        const pop = document.createElement('div');
+        pop.className = '_trame-popover';
+        pop.style.cssText = 'position:fixed; z-index:9999; background:#fff; border:1px solid #ccc; border-radius:6px; padding:8px; box-shadow:0 4px 16px rgba(0,0,0,0.18); display:flex; flex-direction:column; gap:6px; min-width:160px;';
+
+        const title = document.createElement('div');
+        title.style.cssText = 'font-size:0.75rem; font-weight:600; color:#555; margin-bottom:2px;';
+        title.textContent = `Couleur — Bloc ${t} (occ. ${i + 1})`;
+        pop.appendChild(title);
+
+        if (usedColors.length > 0) {
+          const palLbl = document.createElement('div');
+          palLbl.style.cssText = 'font-size:0.7rem; color:#888;';
+          palLbl.textContent = 'Couleurs existantes :';
+          pop.appendChild(palLbl);
+          const pal = document.createElement('div');
+          pal.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px;';
+          usedColors.forEach(c => {
+            const swatch = document.createElement('div');
+            swatch.style.cssText = `width:22px; height:22px; background:${c}; border-radius:3px; cursor:pointer; border:2px solid ${c === color ? '#333' : 'transparent'}; box-sizing:border-box;`;
+            swatch.title = c;
+            swatch.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              seg.style.background = c;
+              BlocsTrame.setOccurrenceColor(idx, c);
+              pop.remove();
+            });
+            pal.appendChild(swatch);
+          });
+          pop.appendChild(pal);
+        }
+
+        const pickerRow = document.createElement('div');
+        pickerRow.style.cssText = 'display:flex; align-items:center; gap:6px; margin-top:2px;';
+        const pickerLbl = document.createElement('label');
+        pickerLbl.style.cssText = 'font-size:0.75rem; color:#555; cursor:pointer; display:flex; align-items:center; gap:4px;';
+        pickerLbl.textContent = 'Autre couleur\u2026';
+        const pickerInp = document.createElement('input');
+        pickerInp.type = 'color';
+        pickerInp.value = color;
+        pickerInp.style.cssText = 'width:28px; height:24px; padding:0; border:none; cursor:pointer; border-radius:3px;';
+        pickerInp.addEventListener('input', () => {
+          seg.style.background = pickerInp.value;
+          BlocsTrame.setOccurrenceColor(idx, pickerInp.value);
+        });
+        pickerInp.addEventListener('change', () => { pop.remove(); });
+        pickerLbl.appendChild(pickerInp);
+        pickerRow.appendChild(pickerLbl);
+        pop.appendChild(pickerRow);
+
+        document.body.appendChild(pop);
+        const rect = seg.getBoundingClientRect();
+        let left = rect.left;
+        let top  = rect.bottom + 4;
+        if (left + pop.offsetWidth > window.innerWidth - 8) left = window.innerWidth - pop.offsetWidth - 8;
+        if (top + pop.offsetHeight > window.innerHeight - 8) top = rect.top - pop.offsetHeight - 4;
+        pop.style.left = left + 'px';
+        pop.style.top  = top  + 'px';
+
+        setTimeout(() => {
+          const closeHandler = (ev) => {
+            if (!pop.contains(ev.target)) {
+              pop.remove();
+              document.removeEventListener('mousedown', closeHandler);
+            }
+          };
+          document.addEventListener('mousedown', closeHandler);
+        }, 100);
+      });
+
+      band.appendChild(seg);
+    });
+  },
+
+  // Map ligne → couleur d'occurrence
+  _buildRowMap() {
+    if (!this._lastSequence || !this._lastSequence.length) return {};
+    const blocMap = {};
+    this.blocs.forEach(b => { blocMap[b.name] = b; });
+    const map = {};
+    let row = 0;
+    this._lastSequence.forEach((t, i) => {
+      const bloc = blocMap[t];
+      if (!bloc) return;
+      const bSize = bloc.size || bloc.pattern[0]?.length || 4;
+      const color = this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length];
+      for (let r = 0; r < bSize; r++) map[row + r] = color;
+      row += bSize;
+    });
+    return map;
+  },
+
+  // Applique les couleurs d'occurrences aux cellules de la grille de pédalage
+  _applyColorsToGrid() {
+    const container = document.getElementById('grid-pedalage');
+    if (!container) return;
+    const rowMap = this._buildRowMap();
+    const cells = container.querySelectorAll('.schema-cell');
+    cells.forEach(cell => {
+      const r = parseInt(cell.dataset.r);
+      const isFilled = cell.classList.contains('filled');
+      if (isFilled && rowMap[r]) {
+        cell.style.background = rowMap[r];
+        cell.style.borderColor = rowMap[r];
+      } else {
+        cell.style.background = '';
+        cell.style.borderColor = '';
+      }
+    });
   },
 
   remove(name) {
@@ -1088,71 +1194,26 @@ const BlocsTrame = {
     this.render();
   },
 
-  resizeBloc(name, newSize) {
+  toggle(name, r, c) {
     const bloc = this.blocs.find(b => b.name === name);
     if (!bloc) return;
-    bloc.size = newSize;
-    const prev = bloc.colors.slice();
-    bloc.colors = Array.from({length: newSize}, (_, i) =>
-      prev[i] || this._defaultColors[i % this._defaultColors.length]);
+    // Règle pédalage : 1 seule pédale par duite (colonne)
+    for (let row = 0; row < bloc.pattern.length; row++) bloc.pattern[row][c] = false;
+    bloc.pattern[r][c] = true;
     this.render();
   },
 
-  setStepColor(blocName, stepIdx, color) {
-    const bloc = this.blocs.find(b => b.name === blocName);
+  resize(name, newSize) {
+    const bloc = this.blocs.find(b => b.name === name);
     if (!bloc) return;
-    bloc.colors[stepIdx] = color;
+    const treadles = SchemaEditor.treadles;
+    bloc.size = newSize;
+    bloc.pattern = Array.from({length: treadles}, (_, r) =>
+      Array.from({length: newSize}, (_, c) => bloc.pattern[r]?.[c] || false)
+    );
     this.render();
-    this.renderBand();
-    SchemaEditor.saveToHiddenField();
-    updateSchemaPreview();
   },
 
-  // Couleur individuelle d'une duite (override)
-  setRowColor(rowIdx, color) {
-    this.rowOverrides[rowIdx] = color;
-    this.renderBand();
-    SchemaEditor.saveToHiddenField();
-    updateSchemaPreview();
-    // Mettre à jour le récapitulatif matières
-    if (typeof syncOurdissageFromEnlissage === 'function' && BlocsEnlissage._lastSequence?.length) {
-      const blocMap = {};
-      BlocsEnlissage.blocs.forEach(b => { blocMap[b.name] = b; });
-      syncOurdissageFromEnlissage(BlocsEnlissage._lastSequence, blocMap,
-        BlocsEnlissage.occurrenceColors, BlocsEnlissage._defaultColors);
-    }
-  },
-
-  // Rendu de la bande colorée à droite du pédalage
-  renderBand() {
-    const band = document.getElementById('trame-band');
-    if (!band) return;
-    const rows = SchemaEditor.rows;
-    const cellSize = rows > 32 ? 10 : rows > 20 ? 12 : 14;
-    const allColors = this._allColors();
-    band.innerHTML = '';
-
-    for (let r = 0; r < rows; r++) {
-      const color = this._colorForRow(r);
-      const seg = document.createElement('div');
-      seg.dataset.row = r;
-      seg.style.cssText = `width:${cellSize}px; height:${cellSize}px; background:${color}; border-radius:2px; flex-shrink:0; cursor:pointer;`;
-      seg.title = `Duite ${r + 1} — cliquer pour modifier`;
-
-      const idx = r;
-      seg.addEventListener('click', (e) => {
-        e.stopPropagation();
-        document.querySelectorAll('._trame-popover').forEach(p => p.remove());
-        _showColorPopover(seg, color, allColors,
-          (c) => { BlocsTrame.setRowColor(idx, c); },
-          `Duite ${r + 1}`
-        );
-      });
-      band.appendChild(seg);
-    }
-  },
-
-  // Rendu du panneau de définition des blocs dans #trame-blocs-list
   render() {
     const container = document.getElementById('trame-blocs-list');
     if (!container) return;
@@ -1162,81 +1223,108 @@ const BlocsTrame = {
     }
     container.innerHTML = '';
     this.blocs.forEach(bloc => {
-      const size = bloc.size || bloc.colors.length || 2;
+      const treadles = bloc.pattern.length;
+      const size     = bloc.size || bloc.pattern[0]?.length || 4;
+      const cellPx   = 14;
+
       const wrap = document.createElement('div');
-      wrap.style.cssText = 'display:flex; align-items:center; gap:0.5rem; padding:0.4rem; background:#fff; border:1px solid var(--color-border-light,#e0d8cc); border-radius:4px; flex-wrap:wrap;';
+      wrap.style.cssText = 'display:flex; align-items:flex-start; gap:0.5rem; padding:0.4rem; background:#fff; border:1px solid var(--color-border-light,#e0d8cc); border-radius:4px;';
 
       // Label + supprimer
       const labelCol = document.createElement('div');
       labelCol.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:4px; min-width:28px;';
       const lbl = document.createElement('strong');
+      lbl.style.cssText = 'font-size:1rem; line-height:1;';
       lbl.textContent = bloc.name;
       const delBtn = document.createElement('button');
-      delBtn.type = 'button'; delBtn.textContent = '×';
-      delBtn.style.cssText = 'background:none; border:none; color:#c0392b; cursor:pointer; font-size:0.9rem; padding:0;';
+      delBtn.type = 'button';
+      delBtn.textContent = '\u00d7';
+      delBtn.title = 'Supprimer ce bloc';
+      delBtn.style.cssText = 'background:none; border:none; color:#c0392b; cursor:pointer; font-size:0.9rem; line-height:1; padding:0;';
       delBtn.onclick = () => BlocsTrame.remove(bloc.name);
-      labelCol.appendChild(lbl); labelCol.appendChild(delBtn);
+      labelCol.appendChild(lbl);
+      labelCol.appendChild(delBtn);
       wrap.appendChild(labelCol);
 
-      // Pastilles de couleur pour chaque duite du bloc
-      const stepsEl = document.createElement('div');
-      stepsEl.style.cssText = 'display:flex; gap:3px; align-items:center; flex-wrap:wrap;';
-      for (let s = 0; s < size; s++) {
-        const c = bloc.colors[s] || '#cccccc';
-        const sw = document.createElement('div');
-        sw.style.cssText = `width:20px; height:20px; background:${c}; border-radius:3px; cursor:pointer; border:1px solid #ccc;`;
-        sw.title = `Duite ${s + 1} du bloc ${bloc.name}`;
-        const bName = bloc.name, sIdx = s;
-        sw.addEventListener('click', (e) => {
-          e.stopPropagation();
-          document.querySelectorAll('._trame-step-popover').forEach(p => p.remove());
-          _showColorPopover(sw, c, BlocsTrame._allColors(),
-            (col) => BlocsTrame.setStepColor(bName, sIdx, col),
-            `Bloc ${bName} — duite ${sIdx + 1}`,
-            '_trame-step-popover'
-          );
-        });
-        stepsEl.appendChild(sw);
+      // Grille du bloc (pédales × duites)
+      const gridEl = document.createElement('div');
+      gridEl.style.cssText = `display:grid; grid-template-columns:repeat(${size},${cellPx}px); grid-template-rows:repeat(${treadles},${cellPx}px); gap:1px; cursor:crosshair;`;
+      for (let r = 0; r < treadles; r++) {
+        for (let c = 0; c < size; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'schema-cell' + (bloc.pattern[r][c] ? ' filled' : '');
+          cell.title = `Pédale ${r+1}, duite ${c+1}`;
+          const bName = bloc.name, br = r, bc = c;
+          cell.addEventListener('mousedown', e => { e.preventDefault(); BlocsTrame.toggle(bName, br, bc); });
+          gridEl.appendChild(cell);
+        }
       }
-      wrap.appendChild(stepsEl);
+      wrap.appendChild(gridEl);
 
-      // Boutons taille
+      // Taille du bloc — boutons − / valeur / +
+      const sizeCol = document.createElement('div');
+      sizeCol.style.cssText = 'display:flex; flex-direction:column; gap:4px; font-size:0.75rem; align-items:center;';
+      const sizeLbl = document.createElement('label');
+      sizeLbl.textContent = 'Duites';
       const sizeRow = document.createElement('div');
-      sizeRow.style.cssText = 'display:flex; align-items:center; gap:3px; font-size:0.75rem;';
-      const sizeLbl = document.createElement('span'); sizeLbl.textContent = 'Duites :';
-      const btnM = document.createElement('button'); btnM.type='button'; btnM.textContent='−';
-      btnM.style.cssText = 'width:20px; height:20px; padding:0; font-size:0.9rem; border:1px solid #ccc; border-radius:3px; background:#f5f5f5; cursor:pointer;';
+      sizeRow.style.cssText = 'display:flex; align-items:center; gap:3px;';
+      const btnMinus = document.createElement('button');
+      btnMinus.type = 'button';
+      btnMinus.textContent = '\u2212';
+      btnMinus.style.cssText = 'width:20px; height:20px; padding:0; font-size:0.9rem; line-height:1; cursor:pointer; border:1px solid #ccc; border-radius:3px; background:#f5f5f5;';
       const sizeVal = document.createElement('span');
-      sizeVal.style.cssText = 'min-width:18px; text-align:center; font-weight:600;';
+      sizeVal.style.cssText = 'min-width:22px; text-align:center; font-size:0.85rem; font-weight:600;';
       sizeVal.textContent = size;
-      const btnP = document.createElement('button'); btnP.type='button'; btnP.textContent='+';
-      btnP.style.cssText = 'width:20px; height:20px; padding:0; font-size:0.9rem; border:1px solid #ccc; border-radius:3px; background:#f5f5f5; cursor:pointer;';
+      const btnPlus = document.createElement('button');
+      btnPlus.type = 'button';
+      btnPlus.textContent = '+';
+      btnPlus.style.cssText = 'width:20px; height:20px; padding:0; font-size:0.9rem; line-height:1; cursor:pointer; border:1px solid #ccc; border-radius:3px; background:#f5f5f5;';
       const bNameSize = bloc.name;
-      btnM.onclick = () => { const cur = BlocsTrame.blocs.find(b=>b.name===bNameSize)?.size||2; if(cur>1) BlocsTrame.resizeBloc(bNameSize, cur-1); };
-      btnP.onclick = () => { const cur = BlocsTrame.blocs.find(b=>b.name===bNameSize)?.size||2; if(cur<32) BlocsTrame.resizeBloc(bNameSize, cur+1); };
-      sizeRow.appendChild(sizeLbl); sizeRow.appendChild(btnM); sizeRow.appendChild(sizeVal); sizeRow.appendChild(btnP);
-      wrap.appendChild(sizeRow);
+      btnMinus.onclick = () => {
+        const cur = BlocsTrame.blocs.find(b => b.name === bNameSize)?.size || 4;
+        if (cur > 1) { BlocsTrame.resize(bNameSize, cur - 1); }
+      };
+      btnPlus.onclick = () => {
+        const cur = BlocsTrame.blocs.find(b => b.name === bNameSize)?.size || 4;
+        if (cur < 32) { BlocsTrame.resize(bNameSize, cur + 1); }
+      };
+      sizeRow.appendChild(btnMinus);
+      sizeRow.appendChild(sizeVal);
+      sizeRow.appendChild(btnPlus);
+      sizeCol.appendChild(sizeLbl);
+      sizeCol.appendChild(sizeRow);
+      wrap.appendChild(sizeCol);
+
       container.appendChild(wrap);
     });
   },
 
-  // Applique la séquence de blocs à la bande trame
   applySequence(sequenceStr, repeat) {
-    if (this.blocs.length === 0) { showToast('Définissez au moins un bloc trame avant d\'appliquer.', 'error'); return; }
+    if (this.blocs.length === 0) { showToast('Définissez au moins un bloc avant d\'appliquer.', 'error'); return; }
     const tokens = sequenceStr.trim().toUpperCase().split(/\s+/).filter(Boolean);
     if (tokens.length === 0) { showToast('Entrez une séquence (ex : A B A B).', 'error'); return; }
+
     const blocMap = {};
     this.blocs.forEach(b => { blocMap[b.name] = b; });
     for (const t of tokens) {
-      if (!blocMap[t]) { showToast(`Bloc trame "${t}" non défini.`, 'error'); return; }
+      if (!blocMap[t]) { showToast(`Bloc "${t}" non défini.`, 'error'); return; }
     }
+
     const fullSeq = [];
     for (let i = 0; i < repeat; i++) fullSeq.push(...tokens);
     this._lastSequence = fullSeq;
-    this.rowOverrides = {}; // Réinitialiser les overrides individuels
+
+    // Initialiser les couleurs d'occurrences manquantes
+    for (let i = 0; i < fullSeq.length; i++) {
+      if (!this.occurrenceColors[i]) {
+        this.occurrenceColors[i] = this._defaultColors[i % this._defaultColors.length];
+      }
+    }
+    this.occurrenceColors = this.occurrenceColors.slice(0, fullSeq.length);
 
     // Calculer le nombre total de duites
-    const totalRows = fullSeq.reduce((s, t) => s + (blocMap[t].size || blocMap[t].colors.length || 2), 0);
+    const totalRows = fullSeq.reduce((s, t) => s + (blocMap[t].size || blocMap[t].pattern[0]?.length || 4), 0);
+    const treadles = SchemaEditor.treadles;
 
     // Redimensionner le pédalage si nécessaire
     if (totalRows !== SchemaEditor.rows) {
@@ -1246,19 +1334,44 @@ const BlocsTrame = {
       SchemaEditor.initData(false);
     }
 
+    // Remplir le pédalage
+    for (let r = 0; r < treadles; r++)
+      for (let c = 0; c < totalRows; c++)
+        SchemaEditor.pedalage[r] = SchemaEditor.pedalage[r] || [];
+
+    // Réinitialiser le pédalage
+    for (let r = 0; r < totalRows; r++)
+      SchemaEditor.pedalage[r] = Array(treadles).fill(false);
+
+    let row = 0;
+    for (const t of fullSeq) {
+      const bloc = blocMap[t];
+      const bSize = bloc.size || bloc.pattern[0]?.length || 4;
+      for (let c = 0; c < bSize; c++) {
+        for (let r = 0; r < treadles; r++) {
+          SchemaEditor.pedalage[row + c][r] = bloc.pattern[r]?.[c] || false;
+        }
+      }
+      row += bSize;
+    }
+
+    // Séparateurs visuels entre blocs
+    SchemaEditor._trameSeparators = [];
+    row = 0;
+    for (let i = 0; i < fullSeq.length - 1; i++) {
+      const bloc = blocMap[fullSeq[i]];
+      row += bloc.size || bloc.pattern[0]?.length || 4;
+      SchemaEditor._trameSeparators.push(row);
+    }
+
     SchemaEditor.render();
     SchemaEditor.saveToHiddenField();
     this.renderBand();
-    showToast(`Trame remplie : ${totalRows} duites en ${fullSeq.length} blocs.`, 'success');
-  },
-
-  // Compatibilité avec l'ancien code (resize appelé depuis SchemaEditor.render)
-  resize(rows) {
-    // Rien à faire : renderBand() est appelé explicitement
+    showToast(`Pédalage rempli : ${totalRows} duites en ${fullSeq.length} blocs.`, 'success');
   }
 };
 
-// Alias pour compatibilité avec saveToHiddenField / loadFromData
+// Alias pour compatibilité
 const TrameBand = BlocsTrame;
 
 // ─── POPOVER COULEUR PARTAGÉ ──────────────────────────────────────────────────
