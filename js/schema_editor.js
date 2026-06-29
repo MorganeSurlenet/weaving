@@ -166,9 +166,9 @@ const SchemaEditor = {
       attachage: this.attachage,
       pedalage:  this.pedalage,
       // Blocs d'enlissage
-      blocs:              BlocsEnlissage.blocs,
-      blocsSequence:      BlocsEnlissage._lastSequence || [],
-      blocsColOverrides:  BlocsEnlissage.colOverrides || {},
+      blocs:            BlocsEnlissage.blocs,
+      blocsSequence:    BlocsEnlissage._lastSequence || [],
+      blocsColors:      BlocsEnlissage.occurrenceColors || [],
       // Blocs de trame
       trameBlocs:        BlocsTrame.blocs,
       trameSequence:     BlocsTrame._lastSequence || [],
@@ -271,35 +271,18 @@ const SchemaEditor = {
       this.pedalage   = d.pedalage   || [];
       // Restaurer les blocs d'enlissage
       if (d.blocs && d.blocs.length > 0) {
-        // Compatibilité ascendante : ancienne clé blocsColors (occurrence-based) → colors dans chaque bloc
-        if (d.blocsColors && d.blocsColors.length && d.blocs[0] && !d.blocs[0].colors) {
-          const blocMap = {};
-          d.blocs.forEach(b => { blocMap[b.name] = b; });
-          let col = 0;
-          (d.blocsSequence || []).forEach((t, i) => {
-            const bloc = blocMap[t];
-            if (!bloc) return;
-            const bSize = bloc.size || bloc.pattern?.[0]?.length || 4;
-            if (!bloc.colors) bloc.colors = Array(bSize).fill(null);
-            const c = d.blocsColors[i];
-            if (c) for (let j = 0; j < bSize; j++) bloc.colors[j] = bloc.colors[j] || c;
-            col += bSize;
-          });
-        }
-        // S'assurer que chaque bloc a un tableau colors
-        d.blocs.forEach(b => {
-          const sz = b.size || b.pattern?.[0]?.length || 4;
-          if (!b.colors) b.colors = Array.from({length: sz}, (_, i) => BlocsEnlissage._defaultColors[i % BlocsEnlissage._defaultColors.length]);
-        });
         BlocsEnlissage.blocs = d.blocs;
         BlocsEnlissage._lastSequence = d.blocsSequence || [];
-        BlocsEnlissage.colOverrides = d.blocsColOverrides || {};
+        BlocsEnlissage.occurrenceColors = d.blocsColors || [];
         BlocsEnlissage.render();
         BlocsEnlissage.renderBand();
+        // Restaurer la séquence dans le champ texte
         const seqInput = document.getElementById('blocs-sequence');
         if (seqInput && d.blocsSequence && d.blocsSequence.length > 0) {
           seqInput.value = d.blocsSequence.join(' ');
         }
+        // Mettre à jour la bande
+        // (renderBand déjà appelé ci-dessus)
       }
       // Sync les inputs
       const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
@@ -393,23 +376,17 @@ const SchemaEditor = {
     container.className = 'draft-container draft-readonly-wrapper';
 
     // Construire la map colonne → couleur depuis les données sauvegardées
-    // Nouveau format : colors[] par fil dans chaque bloc + colOverrides
     const roColMap = {};
-    if (d.blocsSequence && d.blocsSequence.length && d.blocs) {
+    if (d.blocsSequence && d.blocsSequence.length && d.blocs && d.blocsColors) {
       const blocMap = {};
       d.blocs.forEach(b => { blocMap[b.name] = b; });
       let col = 0;
       d.blocsSequence.forEach((t, i) => {
         const bloc = blocMap[t];
         if (!bloc) return;
-        const bSize = bloc.size || bloc.colors?.length || bloc.pattern?.[0]?.length || 4;
-        for (let c = 0; c < bSize; c++) {
-          // Priorité : colOverride > couleur du fil dans le bloc > blocsColors (compat) > défaut
-          const override = d.blocsColOverrides?.[col + c];
-          const stepColor = bloc.colors?.[c];
-          const occColor = d.blocsColors?.[i];
-          roColMap[col + c] = override || stepColor || occColor || null;
-        }
+        const bSize = bloc.size || bloc.pattern?.[0]?.length || 4;
+        const color = d.blocsColors[i];
+        if (color) for (let c = 0; c < bSize; c++) roColMap[col + c] = color;
         col += bSize;
       });
     }
@@ -418,19 +395,29 @@ const SchemaEditor = {
     const zoneEnl = document.createElement('div');
     zoneEnl.className = 'draft-zone-enlacement';
 
-    // Bande colorée au-dessus (même sens rtl) — une pastille par fil
-    if (d.blocsSequence && d.blocsSequence.length && d.blocs) {
+    // Bande colorée au-dessus (même sens rtl)
+    if (d.blocsSequence && d.blocsSequence.length && d.blocs && d.blocsColors) {
       const bandRo = document.createElement('div');
       bandRo.style.cssText = 'display:flex; flex-direction:row-reverse; height:10px; gap:1px; margin-bottom:2px;';
       const cellSize = d.cols > 32 ? 8 : d.cols > 20 ? 10 : 12;
-      for (let c = 0; c < d.cols; c++) {
-        const color = roColMap[c];
-        if (!color) continue;
+      const blocMapRo = {};
+      d.blocs.forEach(b => { blocMapRo[b.name] = b; });
+      d.blocsSequence.forEach((t, i) => {
+        const bloc = blocMapRo[t];
+        if (!bloc) return;
+        const bSize = bloc.size || bloc.pattern?.[0]?.length || 4;
+        const color = d.blocsColors[i];
+        if (!color) return;
+        const segW = bSize * cellSize + (bSize - 1);
         const seg = document.createElement('div');
-        seg.style.cssText = `width:${cellSize}px; height:10px; background:${color}; border-radius:1px; flex-shrink:0;`;
+        seg.style.cssText = `width:${segW}px; height:10px; background:${color}; border-radius:1px; flex-shrink:0; display:flex; align-items:center; justify-content:center;`;
+        const lbl2 = document.createElement('span');
+        lbl2.style.cssText = 'font-size:7px; font-weight:700; color:#fff; pointer-events:none;';
+        lbl2.textContent = t;
+        seg.appendChild(lbl2);
         bandRo.appendChild(seg);
-      }
-      if (bandRo.children.length > 0) zoneEnl.appendChild(bandRo);
+      });
+      zoneEnl.appendChild(bandRo);
     }
 
     const enlData = d.enlissage || d.enlacement;
@@ -546,122 +533,215 @@ function closeSchemaEditor() {
 }
 
 // ─── BLOCS D'ENLISSAGE ──────────────────────────────────────────────────────
-// Système identique à BlocsTrame.
-// Chaque bloc définit : une grille pattern (cadres × fils) + une couleur par fil.
-// colOverrides[c] = couleur individuelle (prioritaire sur le bloc).
+
+// Stockage des blocs définis par l'utilisateur
+// Chaque bloc : { name: 'A', pattern: [[bool, bool, ...], ...] }  (rows=cadres, cols=nb fils du bloc)
 const BlocsEnlissage = {
-  blocs: [],           // [{name, colors:[hex,...], size, pattern:[[bool]]}]
-  _lastSequence: [],   // séquence complète après applySequence
-  colOverrides: {},    // {colIndex: hex} — couleurs individuelles par fil dans la bande
+  blocs: [],   // [{name, pattern}]
+  _nextName: 65, // code ASCII de 'A'
 
-  _defaultColors: ['#4a90d9','#e67e22','#27ae60','#8e44ad','#c0392b','#16a085','#f39c12','#2c3e50'],
-
+  // Retourne la plus petite lettre disponible (repart toujours de A)
   _nextLetter() {
     const used = new Set(this.blocs.map(b => b.name));
-    let code = 65;
+    let code = 65; // 'A'
     while (used.has(String.fromCharCode(code))) code++;
     return String.fromCharCode(code);
   },
 
-  // Palette commune : toutes les couleurs utilisées dans les blocs + overrides + blocs trame
-  _allColors() {
-    const set = new Set();
-    this.blocs.forEach(b => (b.colors || []).forEach(c => { if(c) set.add(c); }));
-    Object.values(this.colOverrides).forEach(c => { if(c) set.add(c); });
-    if (typeof BlocsTrame !== 'undefined') {
-      BlocsTrame.blocs.forEach(b => (b.colors || []).forEach(c => { if(c) set.add(c); }));
-      Object.values(BlocsTrame.rowOverrides || {}).forEach(c => { if(c) set.add(c); });
-    }
-    return [...set];
-  },
+  // Couleurs par défaut pour les occurrences
+  _defaultColors: ['#4a90d9','#e67e22','#27ae60','#8e44ad','#c0392b','#16a085','#f39c12','#2c3e50'],
 
-  // Calcule la couleur effective d'un fil (override > bloc > défaut)
-  _colorForCol(c) {
-    if (this.colOverrides[c] !== undefined) return this.colOverrides[c];
-    if (this._lastSequence && this._lastSequence.length) {
-      const blocMap = {};
-      this.blocs.forEach(b => { blocMap[b.name] = b; });
-      let col = 0;
-      for (const t of this._lastSequence) {
-        const bloc = blocMap[t];
-        if (!bloc) continue;
-        const bSize = bloc.size || bloc.colors.length || 4;
-        if (c >= col && c < col + bSize) {
-          return bloc.colors[c - col] || this._defaultColors[(c - col) % this._defaultColors.length];
-        }
-        col += bSize;
-      }
-    }
-    return this._defaultColors[c % this._defaultColors.length];
-  },
+  // Couleurs par occurrence dans la séquence complète (index = position dans fullSeq)
+  occurrenceColors: [],
 
+  // Ajoute un nouveau bloc vide (sans couleur propre)
   add() {
     const name = this._nextLetter();
     const shafts = SchemaEditor.shafts;
     const size = 4;
-    const colors = Array.from({length: size}, (_, i) =>
-      this._defaultColors[(this.blocs.length * size + i) % this._defaultColors.length]);
     const pattern = Array.from({length: shafts}, () => Array(size).fill(false));
-    this.blocs.push({ name, colors, size, pattern });
+    this.blocs.push({ name, pattern, size });
     this.render();
   },
 
-  remove(name) {
-    this.blocs = this.blocs.filter(b => b.name !== name);
-    this.render();
-  },
-
-  resizeBloc(name, newSize) {
-    const bloc = this.blocs.find(b => b.name === name);
-    if (!bloc) return;
-    const shafts = SchemaEditor.shafts;
-    const prevColors  = bloc.colors.slice();
-    const prevPattern = bloc.pattern.map(row => row.slice());
-    bloc.size = newSize;
-    bloc.colors  = Array.from({length: newSize}, (_, i) =>
-      prevColors[i] || this._defaultColors[i % this._defaultColors.length]);
-    bloc.pattern = Array.from({length: shafts}, (_, r) =>
-      Array.from({length: newSize}, (_, c) => prevPattern[r]?.[c] || false));
-    this.render();
-  },
-
-  // Modifier la couleur d'un fil dans un bloc
-  setStepColor(blocName, stepIdx, color) {
-    const bloc = this.blocs.find(b => b.name === blocName);
-    if (!bloc) return;
-    bloc.colors[stepIdx] = color;
-    this.render();
-    this.renderBand();
+  // Met à jour la couleur d'une occurrence
+  setOccurrenceColor(idx, color) {
+    this.occurrenceColors[idx] = color;
     this._applyColorsToGrid();
+    this.renderBand();
+    // Sauvegarder dans le champ caché et mettre à jour la préview
     SchemaEditor.saveToHiddenField();
     updateSchemaPreview();
-    this._syncOurdissage();
-  },
-
-  // Couleur individuelle d'un fil (override)
-  setColColor(colIdx, color) {
-    this.colOverrides[colIdx] = color;
-    this.renderBand();
-    this._applyColorsToGrid();
-    SchemaEditor.saveToHiddenField();
-    updateSchemaPreview();
-    this._syncOurdissage();
-  },
-
-  _syncOurdissage() {
+    // Synchroniser le tableau d'ourdissage
     if (this._lastSequence && this._lastSequence.length) {
       const blocMap = {};
       this.blocs.forEach(b => { blocMap[b.name] = b; });
-      // Construire occurrenceColors depuis les couleurs de blocs pour compatibilité
-      const occColors = [];
-      this._lastSequence.forEach((t, i) => {
-        const bloc = blocMap[t];
-        if (bloc) occColors[i] = bloc.colors[0] || this._defaultColors[i % this._defaultColors.length];
-      });
-      if (typeof syncOurdissageFromEnlissage === 'function') {
-        syncOurdissageFromEnlissage();
-      }
+      syncOurdissageFromEnlissage(this._lastSequence, blocMap, this.occurrenceColors, this._defaultColors);
     }
+  },
+
+  // Affiche la bande colorée au-dessus de la grille d'enlissage
+  // Clic sur un segment : popover avec palette des couleurs existantes + picker natif
+  renderBand() {
+    const band = document.getElementById('blocs-band');
+    if (!band || !this._lastSequence || !this._lastSequence.length) return;
+    const cellSize = SchemaEditor.cols > 32 ? 10 : SchemaEditor.cols > 20 ? 12 : 14;
+    const blocMap = {};
+    this.blocs.forEach(b => { blocMap[b.name] = b; });
+    band.innerHTML = '';
+    band.style.gap = '1px';
+
+    // Collecter les couleurs uniques déjà utilisées dans la séquence
+    const usedColors = [...new Set(
+      this._lastSequence.map((_, i) => this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length])
+    )];
+
+    this._lastSequence.forEach((t, i) => {
+      const bloc = blocMap[t];
+      if (!bloc) return;
+      const bSize = bloc.size || bloc.pattern[0]?.length || 4;
+      const color = this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length];
+      const segW = bSize * cellSize + (bSize - 1);
+
+      const seg = document.createElement('div');
+      seg.title = `Cliquer pour changer la couleur (occurrence ${i + 1} — Bloc ${t})`;
+      seg.style.cssText = `width:${segW}px; height:20px; background:${color}; border-radius:2px; flex-shrink:0; position:relative; cursor:pointer;`;
+
+      const lbl = document.createElement('span');
+      lbl.style.cssText = 'position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:#fff; text-shadow:0 0 2px rgba(0,0,0,0.6); pointer-events:none; z-index:1;';
+      lbl.textContent = bloc.name;
+      seg.appendChild(lbl);
+
+      const idx = i;
+      seg.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Fermer tout popover existant
+        document.querySelectorAll('._blocs-popover').forEach(p => p.remove());
+
+        const pop = document.createElement('div');
+        pop.className = '_blocs-popover';
+        pop.style.cssText = 'position:fixed; z-index:9999; background:#fff; border:1px solid #ccc; border-radius:6px; padding:8px; box-shadow:0 4px 16px rgba(0,0,0,0.18); display:flex; flex-direction:column; gap:6px; min-width:160px;';
+
+        // Titre
+        const title = document.createElement('div');
+        title.style.cssText = 'font-size:0.75rem; font-weight:600; color:#555; margin-bottom:2px;';
+        title.textContent = `Couleur — Bloc ${t} (occ. ${i + 1})`;
+        pop.appendChild(title);
+
+        // Palette des couleurs déjà utilisées
+        if (usedColors.length > 0) {
+          const palLbl = document.createElement('div');
+          palLbl.style.cssText = 'font-size:0.7rem; color:#888;';
+          palLbl.textContent = 'Couleurs existantes :';
+          pop.appendChild(palLbl);
+
+          const pal = document.createElement('div');
+          pal.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px;';
+          usedColors.forEach(c => {
+            const swatch = document.createElement('div');
+            swatch.style.cssText = `width:22px; height:22px; background:${c}; border-radius:3px; cursor:pointer; border:2px solid ${c === color ? '#333' : 'transparent'}; box-sizing:border-box;`;
+            swatch.title = c;
+            swatch.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              seg.style.background = c;
+              BlocsEnlissage.setOccurrenceColor(idx, c);
+              pop.remove();
+            });
+            pal.appendChild(swatch);
+          });
+          pop.appendChild(pal);
+        }
+
+        // Bouton picker natif
+        const pickerRow = document.createElement('div');
+        pickerRow.style.cssText = 'display:flex; align-items:center; gap:6px; margin-top:2px;';
+        const pickerLbl = document.createElement('label');
+        pickerLbl.style.cssText = 'font-size:0.75rem; color:#555; cursor:pointer; display:flex; align-items:center; gap:4px;';
+        pickerLbl.textContent = 'Autre couleur…';
+        const pickerInp = document.createElement('input');
+        pickerInp.type = 'color';
+        pickerInp.value = color;
+        pickerInp.style.cssText = 'width:28px; height:24px; padding:0; border:none; cursor:pointer; border-radius:3px;';
+        pickerInp.addEventListener('input', () => {
+          seg.style.background = pickerInp.value;
+          BlocsEnlissage.setOccurrenceColor(idx, pickerInp.value);
+        });
+        pickerInp.addEventListener('change', () => { pop.remove(); });
+        pickerLbl.appendChild(pickerInp);
+        pickerRow.appendChild(pickerLbl);
+        pop.appendChild(pickerRow);
+
+        // Positionner le popover sous le segment
+        document.body.appendChild(pop);
+        const rect = seg.getBoundingClientRect();
+        let left = rect.left;
+        let top  = rect.bottom + 4;
+        if (left + pop.offsetWidth > window.innerWidth - 8) left = window.innerWidth - pop.offsetWidth - 8;
+        if (top + pop.offsetHeight > window.innerHeight - 8) top = rect.top - pop.offsetHeight - 4;
+        pop.style.left = left + 'px';
+        pop.style.top  = top  + 'px';
+
+        // Fermer si clic en dehors du popover (avec délai pour éviter auto-fermeture)
+        setTimeout(() => {
+          const closeHandler = (ev) => {
+            if (!pop.contains(ev.target)) {
+              pop.remove();
+              document.removeEventListener('mousedown', closeHandler);
+            }
+          };
+          document.addEventListener('mousedown', closeHandler);
+        }, 100);
+      });
+
+      band.appendChild(seg);
+    });
+  },
+
+  // Construit la map colonne → couleur d'occurrence
+  _buildColMap() {
+    if (!this._lastSequence || !this._lastSequence.length) return {};
+    const blocMap = {};
+    this.blocs.forEach(b => { blocMap[b.name] = b; });
+    const map = {}; // col index → color
+    let col = 0;
+    this._lastSequence.forEach((t, i) => {
+      const bloc = blocMap[t];
+      if (!bloc) return;
+      const bSize = bloc.size || bloc.pattern[0]?.length || 4;
+      const color = this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length];
+      for (let c = 0; c < bSize; c++) map[col + c] = color;
+      col += bSize;
+    });
+    return map;
+  },
+
+  // Applique les couleurs d'occurrences aux cellules de la grille d'enlissage
+  _applyColorsToGrid() {
+    const container = document.getElementById('grid-enlissage');
+    if (!container) return;
+    const colMap = this._buildColMap();
+    const cells = container.querySelectorAll('.schema-cell');
+    const cols = SchemaEditor.cols;
+    cells.forEach(cell => {
+      const c = parseInt(cell.dataset.c);
+      const isFilled = cell.classList.contains('filled');
+      if (isFilled && colMap[c]) {
+        cell.style.background = colMap[c];
+        cell.style.borderColor = colMap[c];
+      } else if (isFilled) {
+        cell.style.background = '';
+        cell.style.borderColor = '';
+      } else {
+        cell.style.background = '';
+        cell.style.borderColor = '';
+      }
+    });
+  },
+
+  // Supprime un bloc par nom
+  remove(name) {
+    this.blocs = this.blocs.filter(b => b.name !== name);
+    this.render();
   },
 
   // Bascule une case dans le pattern d'un bloc
@@ -674,57 +754,19 @@ const BlocsEnlissage = {
     this.render();
   },
 
-  // Rendu de la bande colorée au-dessus de la grille d'enlissage
-  renderBand() {
-    const band = document.getElementById('blocs-band');
-    if (!band) return;
-    const cols = SchemaEditor.cols;
-    const cellSize = cols > 32 ? 10 : cols > 20 ? 12 : 14;
-    const allColors = this._allColors();
-    band.innerHTML = '';
-
-    for (let c = 0; c < cols; c++) {
-      const color = this._colorForCol(c);
-      const seg = document.createElement('div');
-      seg.dataset.col = c;
-      seg.style.cssText = `width:${cellSize}px; height:${cellSize}px; background:${color}; border-radius:2px; flex-shrink:0; cursor:pointer;`;
-      seg.title = `Fil ${c + 1} — cliquer pour modifier`;
-
-      const idx = c;
-      seg.addEventListener('click', (e) => {
-        e.stopPropagation();
-        document.querySelectorAll('._enl-popover').forEach(p => p.remove());
-        _showColorPopover(seg, color, allColors,
-          (col) => { BlocsEnlissage.setColColor(idx, col); },
-          `Fil ${c + 1}`,
-          '_enl-popover'
-        );
-      });
-      band.appendChild(seg);
-    }
+  // Redimensionne un bloc (change le nombre de fils)
+  resize(name, newSize) {
+    const bloc = this.blocs.find(b => b.name === name);
+    if (!bloc) return;
+    const shafts = SchemaEditor.shafts;
+    bloc.size = newSize;
+    bloc.pattern = Array.from({length: shafts}, (_, r) =>
+      Array.from({length: newSize}, (_, c) => bloc.pattern[r]?.[c] || false)
+    );
+    this.render();
   },
 
-  // Applique les couleurs aux cellules de la grille d'enlissage
-  _applyColorsToGrid() {
-    const container = document.getElementById('grid-enlissage');
-    if (!container) return;
-    const cols = SchemaEditor.cols;
-    const cells = container.querySelectorAll('.schema-cell');
-    cells.forEach(cell => {
-      const c = parseInt(cell.dataset.c);
-      const isFilled = cell.classList.contains('filled');
-      const color = this._colorForCol(c);
-      if (isFilled && color) {
-        cell.style.background = color;
-        cell.style.borderColor = color;
-      } else {
-        cell.style.background = '';
-        cell.style.borderColor = '';
-      }
-    });
-  },
-
-  // Rendu du panneau de définition des blocs dans #blocs-list
+  // Rendu de tous les blocs dans #blocs-list
   render() {
     const container = document.getElementById('blocs-list');
     if (!container) return;
@@ -734,12 +776,12 @@ const BlocsEnlissage = {
     }
     container.innerHTML = '';
     this.blocs.forEach(bloc => {
-      const shafts = bloc.pattern.length || SchemaEditor.shafts;
-      const size   = bloc.size || bloc.colors.length || 4;
+      const shafts = bloc.pattern.length;
+      const size   = bloc.size || bloc.pattern[0]?.length || 4;
       const cellPx = 14;
 
       const wrap = document.createElement('div');
-      wrap.style.cssText = 'display:flex; align-items:flex-start; gap:0.5rem; padding:0.4rem; background:#fff; border:1px solid var(--color-border-light,#e0d8cc); border-radius:4px; flex-wrap:wrap;';
+      wrap.style.cssText = 'display:flex; align-items:flex-start; gap:0.5rem; padding:0.4rem; background:#fff; border:1px solid var(--color-border-light,#e0d8cc); border-radius:4px;';
 
       // Label + supprimer
       const labelCol = document.createElement('div');
@@ -748,79 +790,64 @@ const BlocsEnlissage = {
       lbl.style.cssText = 'font-size:1rem; line-height:1;';
       lbl.textContent = bloc.name;
       const delBtn = document.createElement('button');
-      delBtn.type = 'button'; delBtn.textContent = '×';
+      delBtn.type = 'button';
+      delBtn.textContent = '×';
       delBtn.title = 'Supprimer ce bloc';
-      delBtn.style.cssText = 'background:none; border:none; color:#c0392b; cursor:pointer; font-size:0.9rem; padding:0;';
+      delBtn.style.cssText = 'background:none; border:none; color:#c0392b; cursor:pointer; font-size:0.9rem; line-height:1; padding:0;';
       delBtn.onclick = () => this.remove(bloc.name);
-      labelCol.appendChild(lbl); labelCol.appendChild(delBtn);
+      labelCol.appendChild(lbl);
+      labelCol.appendChild(delBtn);
       wrap.appendChild(labelCol);
 
-      // Colonne centrale : pastilles de couleur + grille pattern
-      const centerCol = document.createElement('div');
-      centerCol.style.cssText = 'display:flex; flex-direction:column; gap:3px;';
-
-      // Pastilles de couleur (une par fil du bloc)
-      const stepsEl = document.createElement('div');
-      stepsEl.style.cssText = `display:flex; gap:1px; align-items:center;`;
-      for (let s = 0; s < size; s++) {
-        const c = bloc.colors[s] || '#cccccc';
-        const sw = document.createElement('div');
-        sw.style.cssText = `width:${cellPx}px; height:${cellPx}px; background:${c}; border-radius:2px; cursor:pointer; border:1px solid #ccc; box-sizing:border-box;`;
-        sw.title = `Fil ${s + 1} du bloc ${bloc.name}`;
-        const bName = bloc.name, sIdx = s;
-        sw.addEventListener('click', (e) => {
-          e.stopPropagation();
-          document.querySelectorAll('._enl-step-popover').forEach(p => p.remove());
-          _showColorPopover(sw, c, BlocsEnlissage._allColors(),
-            (col) => BlocsEnlissage.setStepColor(bName, sIdx, col),
-            `Bloc ${bName} — fil ${sIdx + 1}`,
-            '_enl-step-popover'
-          );
-        });
-        stepsEl.appendChild(sw);
-      }
-      centerCol.appendChild(stepsEl);
-
-      // Grille pattern du bloc
+      // Grille du bloc
       const gridEl = document.createElement('div');
       gridEl.style.cssText = `display:grid; grid-template-columns:repeat(${size},${cellPx}px); grid-template-rows:repeat(${shafts},${cellPx}px); gap:1px; cursor:crosshair;`;
       for (let r = 0; r < shafts; r++) {
         for (let c = 0; c < size; c++) {
           const cell = document.createElement('div');
-          const filled = bloc.pattern[r]?.[c];
-          cell.className = 'schema-cell' + (filled ? ' filled' : '');
-          if (filled && bloc.colors[c]) {
-            cell.style.background = bloc.colors[c];
-            cell.style.borderColor = bloc.colors[c];
-          }
+          cell.className = 'schema-cell' + (bloc.pattern[r][c] ? ' filled' : '');
           cell.title = `Cadre ${r+1}, fil ${c+1}`;
           const bName = bloc.name, br = r, bc = c;
           cell.addEventListener('mousedown', e => { e.preventDefault(); this.toggle(bName, br, bc); });
           gridEl.appendChild(cell);
         }
       }
-      centerCol.appendChild(gridEl);
-      wrap.appendChild(centerCol);
+      wrap.appendChild(gridEl);
 
-      // Boutons taille
+      // Taille du bloc — boutons − / valeur / +
+      const sizeCol = document.createElement('div');
+      sizeCol.style.cssText = 'display:flex; flex-direction:column; gap:4px; font-size:0.75rem; align-items:center;';
+      const sizeLbl = document.createElement('label');
+      sizeLbl.textContent = 'Fils';
       const sizeRow = document.createElement('div');
-      sizeRow.style.cssText = 'display:flex; flex-direction:column; gap:4px; font-size:0.75rem; align-items:center;';
-      const sizeLbl = document.createElement('label'); sizeLbl.textContent = 'Fils';
-      const sizeCtrl = document.createElement('div');
-      sizeCtrl.style.cssText = 'display:flex; align-items:center; gap:3px;';
-      const btnM = document.createElement('button'); btnM.type='button'; btnM.textContent='−';
-      btnM.style.cssText = 'width:20px; height:20px; padding:0; font-size:0.9rem; border:1px solid #ccc; border-radius:3px; background:#f5f5f5; cursor:pointer;';
+      sizeRow.style.cssText = 'display:flex; align-items:center; gap:3px;';
+      const btnMinus = document.createElement('button');
+      btnMinus.type = 'button';
+      btnMinus.textContent = '−';
+      btnMinus.style.cssText = 'width:20px; height:20px; padding:0; font-size:0.9rem; line-height:1; cursor:pointer; border:1px solid #ccc; border-radius:3px; background:#f5f5f5;';
       const sizeVal = document.createElement('span');
       sizeVal.style.cssText = 'min-width:22px; text-align:center; font-size:0.85rem; font-weight:600;';
       sizeVal.textContent = size;
-      const btnP = document.createElement('button'); btnP.type='button'; btnP.textContent='+';
-      btnP.style.cssText = 'width:20px; height:20px; padding:0; font-size:0.9rem; border:1px solid #ccc; border-radius:3px; background:#f5f5f5; cursor:pointer;';
+      const btnPlus = document.createElement('button');
+      btnPlus.type = 'button';
+      btnPlus.textContent = '+';
+      btnPlus.style.cssText = 'width:20px; height:20px; padding:0; font-size:0.9rem; line-height:1; cursor:pointer; border:1px solid #ccc; border-radius:3px; background:#f5f5f5;';
       const bNameSize = bloc.name;
-      btnM.onclick = () => { const cur = BlocsEnlissage.blocs.find(b=>b.name===bNameSize)?.size||4; if(cur>1) BlocsEnlissage.resizeBloc(bNameSize, cur-1); };
-      btnP.onclick = () => { const cur = BlocsEnlissage.blocs.find(b=>b.name===bNameSize)?.size||4; if(cur<32) BlocsEnlissage.resizeBloc(bNameSize, cur+1); };
-      sizeCtrl.appendChild(btnM); sizeCtrl.appendChild(sizeVal); sizeCtrl.appendChild(btnP);
-      sizeRow.appendChild(sizeLbl); sizeRow.appendChild(sizeCtrl);
-      wrap.appendChild(sizeRow);
+      btnMinus.onclick = () => {
+        const cur = BlocsEnlissage.blocs.find(b => b.name === bNameSize)?.size || 4;
+        if (cur > 1) { BlocsEnlissage.resize(bNameSize, cur - 1); }
+      };
+      btnPlus.onclick = () => {
+        const cur = BlocsEnlissage.blocs.find(b => b.name === bNameSize)?.size || 4;
+        if (cur < 32) { BlocsEnlissage.resize(bNameSize, cur + 1); }
+      };
+      sizeRow.appendChild(btnMinus);
+      sizeRow.appendChild(sizeVal);
+      sizeRow.appendChild(btnPlus);
+      sizeCol.appendChild(sizeLbl);
+      sizeCol.appendChild(sizeRow);
+      wrap.appendChild(sizeCol);
+
       container.appendChild(wrap);
     });
   },
@@ -830,18 +857,29 @@ const BlocsEnlissage = {
     if (this.blocs.length === 0) { showToast('Définissez au moins un bloc avant d\'appliquer.', 'error'); return; }
     const tokens = sequenceStr.trim().toUpperCase().split(/\s+/).filter(Boolean);
     if (tokens.length === 0) { showToast('Entrez une séquence (ex : A B A B).', 'error'); return; }
+
+    // Vérifier que tous les tokens correspondent à un bloc
     const blocMap = {};
     this.blocs.forEach(b => { blocMap[b.name] = b; });
     for (const t of tokens) {
       if (!blocMap[t]) { showToast(`Bloc "${t}" non défini.`, 'error'); return; }
     }
+
+    // Construire la séquence complète
     const fullSeq = [];
     for (let i = 0; i < repeat; i++) fullSeq.push(...tokens);
-    this._lastSequence = fullSeq;
-    this.colOverrides = {}; // Réinitialiser les overrides individuels
+    this._lastSequence = fullSeq; // mémoriser pour renderBand
+    // Initialiser les couleurs d'occurrences manquantes avec les couleurs par défaut
+    for (let i = 0; i < fullSeq.length; i++) {
+      if (!this.occurrenceColors[i]) {
+        this.occurrenceColors[i] = this._defaultColors[i % this._defaultColors.length];
+      }
+    }
+    // Tronquer si la séquence est plus courte
+    this.occurrenceColors = this.occurrenceColors.slice(0, fullSeq.length);
 
-    // Calculer le nombre total de fils
-    const totalCols = fullSeq.reduce((s, t) => s + (blocMap[t].size || blocMap[t].colors.length || 4), 0);
+    // Calculer le nombre total de fils nécessaires
+    const totalCols = fullSeq.reduce((s, t) => s + (blocMap[t].size || blocMap[t].pattern[0]?.length || 4), 0);
     const shafts = SchemaEditor.shafts;
 
     // Redimensionner l'enlissage si nécessaire
@@ -852,7 +890,8 @@ const BlocsEnlissage = {
       SchemaEditor.initData(false);
     }
 
-    // Remplir l'enlissage de gauche à droite
+    // Remplir l'enlissage de gauche à droite (fil 0 = premier fil à gauche)
+    // Réinitialiser toute la grille d'enlissage à false
     for (let r = 0; r < shafts; r++)
       for (let c = 0; c < totalCols; c++)
         SchemaEditor.enlissage[r][c] = false;
@@ -860,19 +899,29 @@ const BlocsEnlissage = {
     let col = 0;
     for (const t of fullSeq) {
       const bloc = blocMap[t];
-      const bSize = bloc.size || bloc.colors.length || 4;
+      const bSize = bloc.size || bloc.pattern[0]?.length || 4;
       for (let c = 0; c < bSize; c++) {
         for (let r = 0; r < shafts; r++) {
+          // On copie le pattern tel quel : colonne 0 du bloc → fil le plus à gauche
           SchemaEditor.enlissage[r][col + c] = bloc.pattern[r]?.[c] || false;
         }
       }
       col += bSize;
     }
 
+    // Ajouter des séparateurs visuels entre blocs (stockés dans schema_data)
+    SchemaEditor._blocSeparators = [];
+    col = 0;
+    for (let i = 0; i < fullSeq.length - 1; i++) {
+      const bloc = blocMap[fullSeq[i]];
+      col += bloc.size || bloc.pattern[0]?.length || 4;
+      SchemaEditor._blocSeparators.push(col);
+    }
+
     SchemaEditor.render();
     SchemaEditor.saveToHiddenField();
     this.renderBand();
-    this._syncOurdissage();
+    syncOurdissageFromEnlissage(fullSeq, blocMap, this.occurrenceColors, this._defaultColors);
     showToast(`Enlissage rempli : ${totalCols} fils en ${fullSeq.length} blocs.`, 'success');
   }
 };
@@ -886,6 +935,38 @@ function applyBlocsToEnlissage() {
   const repeat = parseInt(document.getElementById('blocs-repeat')?.value) || 1;
   BlocsEnlissage.applySequence(seq, repeat);
 }
+
+// Génère les color pickers pour chaque occurrence dans la séquence
+function updateBlocsColorPickers() {
+  const container = document.getElementById('blocs-color-pickers');
+  if (!container) return;
+  const seqStr = document.getElementById('blocs-sequence')?.value || '';
+  const repeat = parseInt(document.getElementById('blocs-repeat')?.value) || 1;
+  const tokens = seqStr.trim().toUpperCase().split(/\s+/).filter(Boolean);
+  const fullSeq = [];
+  for (let i = 0; i < repeat; i++) fullSeq.push(...tokens);
+
+  if (fullSeq.length === 0) { container.innerHTML = ''; return; }
+
+  container.innerHTML = '';
+  fullSeq.forEach((t, i) => {
+    const currentColor = BlocsEnlissage.occurrenceColors[i] || BlocsEnlissage._defaultColors[i % BlocsEnlissage._defaultColors.length];
+    const wrap = document.createElement('label');
+    wrap.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:2px; font-size:0.7rem; cursor:pointer;';
+    const lbl = document.createElement('span');
+    lbl.textContent = `${i + 1}. ${t}`;
+    lbl.style.fontWeight = '600';
+    const inp = document.createElement('input');
+    inp.type = 'color';
+    inp.value = currentColor;
+    inp.style.cssText = 'width:28px; height:22px; padding:0; border:none; cursor:pointer;';
+    inp.oninput = () => BlocsEnlissage.setOccurrenceColor(i, inp.value);
+    wrap.appendChild(lbl);
+    wrap.appendChild(inp);
+    container.appendChild(wrap);
+  });
+}
+
 function toggleBlocsPanel() {
   const body = document.getElementById('blocs-enlissage-body');
   const btn  = document.getElementById('btn-blocs-toggle');
@@ -965,8 +1046,7 @@ const BlocsTrame = {
     Object.values(this.rowOverrides).forEach(c => { if(c) set.add(c); });
     // Ajouter aussi les couleurs des blocs enlissage pour la palette partagée
     if (typeof BlocsEnlissage !== 'undefined') {
-      BlocsEnlissage.blocs.forEach(b => (b.colors || []).forEach(c => { if(c) set.add(c); }));
-      Object.values(BlocsEnlissage.colOverrides || {}).forEach(c => { if(c) set.add(c); });
+      (BlocsEnlissage.occurrenceColors || []).forEach(c => { if(c) set.add(c); });
     }
     return [...set];
   },
@@ -1036,7 +1116,10 @@ const BlocsTrame = {
     updateSchemaPreview();
     // Mettre à jour le récapitulatif matières
     if (typeof syncOurdissageFromEnlissage === 'function' && BlocsEnlissage._lastSequence?.length) {
-      syncOurdissageFromEnlissage();
+      const blocMap = {};
+      BlocsEnlissage.blocs.forEach(b => { blocMap[b.name] = b; });
+      syncOurdissageFromEnlissage(BlocsEnlissage._lastSequence, blocMap,
+        BlocsEnlissage.occurrenceColors, BlocsEnlissage._defaultColors);
     }
   },
 
