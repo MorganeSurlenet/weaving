@@ -1455,11 +1455,12 @@ const BlocsTrame = {
     const treadles = SchemaEditor.treadles;
 
     // Redimensionner le pédalage si nécessaire
+    // keepExisting=true pour conserver l'enlissage, l'attachage et les données existantes
     if (totalRows !== SchemaEditor.rows) {
       SchemaEditor.rows = totalRows;
       const rowsInput = document.getElementById('schema-rows');
       if (rowsInput) rowsInput.value = totalRows;
-      SchemaEditor.initData(false);
+      SchemaEditor.initData(true);
     }
 
     // Réinitialiser toute la grille de pédalage à false
