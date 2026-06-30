@@ -318,8 +318,18 @@ const SchemaEditor = {
   },
 
   resize() {
+    const prevShafts   = this.shafts;
+    const prevTreadles = this.treadles;
     this.readDimensions();
     this.initData(true);
+    // Mettre à jour les blocs d'enlissage si le nombre de cadres a changé
+    if (this.shafts !== prevShafts) {
+      BlocsEnlissage._resizeAllBlocs(this.shafts);
+    }
+    // Mettre à jour les blocs de trame si le nombre de pédales a changé
+    if (this.treadles !== prevTreadles) {
+      BlocsTrame._resizeAllBlocs(this.treadles);
+    }
     this.render();
     this.saveToHiddenField();
   },
@@ -564,7 +574,7 @@ const BlocsEnlissage = {
     if (this._lastSequence && this._lastSequence.length) {
       const blocMap = {};
       this.blocs.forEach(b => { blocMap[b.name] = b; });
-      syncOurdissageFromEnlissage(this._lastSequence, blocMap, this.occurrenceColors, this._defaultColors);
+      syncOurdissageFromEnlissage();
     }
   },
 
@@ -754,6 +764,18 @@ const BlocsEnlissage = {
     this.render();
   },
 
+  // Redimensionne tous les blocs existants quand le nombre de cadres change dans SchemaEditor
+  _resizeAllBlocs(newShafts) {
+    if (this.blocs.length === 0) return;
+    this.blocs.forEach(bloc => {
+      const size = bloc.size || bloc.pattern[0]?.length || 4;
+      bloc.pattern = Array.from({length: newShafts}, (_, r) =>
+        Array.from({length: size}, (_, c) => bloc.pattern[r]?.[c] || false)
+      );
+    });
+    this.render();
+  },
+
   // Rendu de tous les blocs dans #blocs-list
   render() {
     const container = document.getElementById('blocs-list');
@@ -909,7 +931,7 @@ const BlocsEnlissage = {
     SchemaEditor.render();
     SchemaEditor.saveToHiddenField();
     this.renderBand();
-    syncOurdissageFromEnlissage(fullSeq, blocMap, this.occurrenceColors, this._defaultColors);
+    syncOurdissageFromEnlissage();
     showToast(`Enlissage rempli : ${totalCols} fils en ${fullSeq.length} blocs.`, 'success');
   }
 };
@@ -1214,6 +1236,19 @@ const BlocsTrame = {
     bloc.pattern = Array.from({length: newSize}, (_, r) =>
       Array.from({length: treadles}, (_, c) => bloc.pattern[r]?.[c] || false)
     );
+    this.render();
+  },
+
+  // Redimensionne tous les blocs existants quand le nombre de pédales change dans SchemaEditor
+  _resizeAllBlocs(newTreadles) {
+    if (this.blocs.length === 0) return;
+    this.blocs.forEach(bloc => {
+      const size = bloc.size || bloc.pattern.length || 4; // nb de duites
+      // Adapter chaque ligne (duite) au nouveau nombre de pédales
+      bloc.pattern = Array.from({length: size}, (_, r) =>
+        Array.from({length: newTreadles}, (_, c) => bloc.pattern[r]?.[c] || false)
+      );
+    });
     this.render();
   },
 
