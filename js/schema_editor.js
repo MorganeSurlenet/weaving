@@ -1063,7 +1063,7 @@ const BlocsTrame = {
     this._lastSequence.forEach((t, i) => {
       const bloc = blocMap[t];
       if (!bloc) return;
-      const bSize = bloc.size || bloc.pattern[0]?.length || 4;
+      const bSize = bloc.size || bloc.pattern.length || 4; // nb de duites
       const color = this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length];
       const segH = bSize * cellSize + (bSize - 1);
 
@@ -1164,7 +1164,7 @@ const BlocsTrame = {
     this._lastSequence.forEach((t, i) => {
       const bloc = blocMap[t];
       if (!bloc) return;
-      const bSize = bloc.size || bloc.pattern[0]?.length || 4;
+      const bSize = bloc.size || bloc.pattern.length || 4; // nb de duites
       const color = this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length];
       for (let r = 0; r < bSize; r++) map[row + r] = color;
       row += bSize;
@@ -1226,8 +1226,8 @@ const BlocsTrame = {
     }
     container.innerHTML = '';
     this.blocs.forEach(bloc => {
-      const treadles = bloc.pattern.length;
-      const size     = bloc.size || bloc.pattern[0]?.length || 4;
+      const treadles = SchemaEditor.treadles; // nb réel de pédales
+      const size     = bloc.size || bloc.pattern.length || 4; // nb de duites
       const cellPx   = 14;
 
       const wrap = document.createElement('div');
@@ -1358,7 +1358,7 @@ const BlocsTrame = {
     row = 0;
     for (let i = 0; i < fullSeq.length - 1; i++) {
       const bloc = blocMap[fullSeq[i]];
-      row += bloc.size || bloc.pattern[0]?.length || 4;
+      row += bloc.size || bloc.pattern.length || 4;
       SchemaEditor._trameSeparators.push(row);
     }
 
