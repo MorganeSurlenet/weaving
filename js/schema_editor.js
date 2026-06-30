@@ -65,8 +65,10 @@ const SchemaEditor = {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Taille des cellules selon le nombre de colonnes
-    const cellSize = cols > 32 ? 10 : cols > 20 ? 12 : 14;
+    // Taille des cellules selon la plus grande dimension (lignes ou colonnes)
+    // pour que toutes les grilles (enlissage, attachage, pédalage) aient la même taille de case
+    const maxDim = Math.max(rows, cols);
+    const cellSize = maxDim > 32 ? 10 : maxDim > 20 ? 12 : 14;
 
     container.innerHTML = '';
     container.style.display = 'grid';
@@ -626,7 +628,8 @@ const BlocsEnlissage = {
   renderBand() {
     const band = document.getElementById('blocs-band');
     if (!band || !this._lastSequence || !this._lastSequence.length) return;
-    const cellSize = SchemaEditor.cols > 32 ? 10 : SchemaEditor.cols > 20 ? 12 : 14;
+    const maxDimEnl = Math.max(SchemaEditor.shafts, SchemaEditor.cols);
+    const cellSize = maxDimEnl > 32 ? 10 : maxDimEnl > 20 ? 12 : 14;
     const blocMap = {};
     this.blocs.forEach(b => { blocMap[b.name] = b; });
     band.innerHTML = '';
@@ -1138,9 +1141,9 @@ const BlocsTrame = {
     const band = document.getElementById('trame-band');
     if (!band || !this._lastSequence || !this._lastSequence.length) return;
     // cellSize identique à _renderGrid pour la grille pédalage :
-    // la grille pédalage est rendue avec cols = treadles (pas cols = fils)
-    // donc cellSize doit être basé sur treadles
-    const cellSize = SchemaEditor.treadles > 32 ? 10 : SchemaEditor.treadles > 20 ? 12 : 14;
+    // utilise Math.max(rows, treadles) comme _renderGrid utilise Math.max(rows, cols)
+    const maxDimTrame = Math.max(SchemaEditor.rows, SchemaEditor.treadles);
+    const cellSize = maxDimTrame > 32 ? 10 : maxDimTrame > 20 ? 12 : 14;
     const blocMap = {};
     this.blocs.forEach(b => { blocMap[b.name] = b; });
     band.innerHTML = '';
