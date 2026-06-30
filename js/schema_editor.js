@@ -49,6 +49,11 @@ const SchemaEditor = {
   },
 
   render() {
+    // Calculer un cellSize global unique basé sur la plus grande dimension de toutes les grilles
+    // pour que toutes les grilles aient exactement la même taille de case
+    const globalMaxDim = Math.max(this.shafts, this.cols, this.treadles, this.rows);
+    this._cellSize = globalMaxDim > 32 ? 10 : globalMaxDim > 20 ? 12 : 14;
+
     // Enlissage : cadres × fils
     this._renderGrid('grid-enlissage', this.enlissage, this.shafts, this.cols,     'enlissage');
     BlocsEnlissage._applyColorsToGrid();
@@ -65,10 +70,8 @@ const SchemaEditor = {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    // Taille des cellules selon la plus grande dimension (lignes ou colonnes)
-    // pour que toutes les grilles (enlissage, attachage, pédalage) aient la même taille de case
-    const maxDim = Math.max(rows, cols);
-    const cellSize = maxDim > 32 ? 10 : maxDim > 20 ? 12 : 14;
+    // Utiliser le cellSize global calculé dans render() pour que toutes les grilles soient identiques
+    const cellSize = this._cellSize || 14;
 
     container.innerHTML = '';
     container.style.display = 'grid';
@@ -628,8 +631,8 @@ const BlocsEnlissage = {
   renderBand() {
     const band = document.getElementById('blocs-band');
     if (!band || !this._lastSequence || !this._lastSequence.length) return;
-    const maxDimEnl = Math.max(SchemaEditor.shafts, SchemaEditor.cols);
-    const cellSize = maxDimEnl > 32 ? 10 : maxDimEnl > 20 ? 12 : 14;
+    // Utiliser le cellSize global de SchemaEditor pour être identique aux grilles
+    const cellSize = SchemaEditor._cellSize || 14;
     const blocMap = {};
     this.blocs.forEach(b => { blocMap[b.name] = b; });
     band.innerHTML = '';
@@ -1140,10 +1143,8 @@ const BlocsTrame = {
   renderBand() {
     const band = document.getElementById('trame-band');
     if (!band || !this._lastSequence || !this._lastSequence.length) return;
-    // cellSize identique à _renderGrid pour la grille pédalage :
-    // utilise Math.max(rows, treadles) comme _renderGrid utilise Math.max(rows, cols)
-    const maxDimTrame = Math.max(SchemaEditor.rows, SchemaEditor.treadles);
-    const cellSize = maxDimTrame > 32 ? 10 : maxDimTrame > 20 ? 12 : 14;
+    // Utiliser le cellSize global de SchemaEditor pour être identique aux grilles
+    const cellSize = SchemaEditor._cellSize || 14;
     const blocMap = {};
     this.blocs.forEach(b => { blocMap[b.name] = b; });
     band.innerHTML = '';
