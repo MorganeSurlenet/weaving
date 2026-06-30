@@ -692,10 +692,10 @@ textarea { resize: vertical; min-height: 80px; }
   min-width: min-content; /* empêche la compression sur mobile */
 }
 
-/* Enlaçage : colonne 1, lignes 1-2 */
+/* Enlaçage : colonne 1, ligne 1 */
 .draft-zone-enlacement {
   grid-column: 1;
-  grid-row: 1 / 3;
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -713,6 +713,15 @@ textarea { resize: vertical; min-height: 80px; }
 /* Pédalage : colonne 2, ligne 2 */
 .draft-zone-pedalage {
   grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Motif (drawdown) : colonne 1, ligne 2 */
+.draft-zone-drawdown {
+  grid-column: 1;
   grid-row: 2;
   display: flex;
   flex-direction: column;
