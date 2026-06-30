@@ -226,6 +226,8 @@ const SchemaEditor = {
                  gridName === 'attachage'  ? this.treadles : this.treadles;
     this._renderGrid(containerId, data, rows, cols, gridName);
     if (gridName === 'enlissage') BlocsEnlissage._applyColorsToGrid();
+    if (gridName === 'pedalage')  BlocsTrame._applyColorsToGrid();
+    this.renderDrawdown();
     this.saveToHiddenField();
   },
 
