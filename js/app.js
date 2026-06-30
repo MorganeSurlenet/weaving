@@ -345,12 +345,13 @@ function renderFicheDetailHTML(f) {
 function calcRecapMatieres(f) {
   const recap = []; // { couleur, hex, usage, nbFils, longTotale_m, poids_g }
 
-  // ── Chaîne : depuis le tableau d'ourdissage ──
+  // ── Chaîne : depuis buildOurdissageData() (calculé automatiquement depuis BlocsEnlissage) ──
   const longChaine = calcLongChaineTotale(f); // en mètres
   const mkg_chaine = f.titrage_chaine ? parseFloat(f.titrage_chaine) : null;
-  if (f.ourdissage && f.ourdissage.length > 0 && longChaine) {
-    f.ourdissage.forEach(row => {
-      const total = parseInt(row.total) || (row.sequence || []).reduce((s, v) => s + (parseInt(v) || 0), 0);
+  if (longChaine && typeof buildOurdissageData === 'function') {
+    const ourdissageRows = buildOurdissageData();
+    ourdissageRows.forEach(row => {
+      const total = row.total || (row.sequence || []).reduce((s, v) => s + (parseInt(v) || 0), 0);
       if (!total) return;
       const longTotale = total * longChaine;
       const poids_g = mkg_chaine ? (longTotale / mkg_chaine) * 1000 : null;
@@ -416,7 +417,40 @@ function calcRecapMatieres(f) {
     } catch(e) {}
   }
 
-  return recap;
+  // ── Regrouper les couleurs identiques (chaîne + trame) ──
+  // Clé = hex (couleur), on cumule nbFils, longTotale_m, poids_g
+  // et on liste les usages distincts
+  const merged = {}; // hex -> { couleur, hex, usages: Set, nbFils, longTotale_m, poids_g }
+  recap.forEach(r => {
+    const key = (r.hex || '').toLowerCase();
+    if (!merged[key]) {
+      merged[key] = {
+        couleur: r.couleur,
+        hex: r.hex,
+        usages: new Set(),
+        nbFils: 0,
+        longTotale_m: 0,
+        poids_g: null
+      };
+    }
+    merged[key].usages.add(r.usage);
+    merged[key].nbFils += r.nbFils || 0;
+    merged[key].longTotale_m += r.longTotale_m || 0;
+    if (r.poids_g !== null && r.poids_g !== undefined) {
+      merged[key].poids_g = (merged[key].poids_g || 0) + r.poids_g;
+    }
+    // Conserver le libellé couleur si disponible
+    if (!merged[key].couleur && r.couleur) merged[key].couleur = r.couleur;
+  });
+
+  return Object.values(merged).map(m => ({
+    couleur: m.couleur,
+    hex: m.hex,
+    usage: [...m.usages].join(' + '),
+    nbFils: m.nbFils,
+    longTotale_m: m.longTotale_m,
+    poids_g: m.poids_g
+  }));
 }
 
 function renderRecapMatieres(f) {
@@ -701,7 +735,7 @@ function openEditFiche(id) {
 function resetForm() {
   document.getElementById('fiche-form').reset();
   // Réinitialiser les tableaux dynamiques
-  initOurdissageForm([]);
+  syncOurdissageFromEnlissage();
   initLissesForm({});
   // Réinitialiser le schéma : fermer l'éditeur et vider l'aperçu
   const editorZone  = document.getElementById('schema-editor-zone');
@@ -769,7 +803,7 @@ function fillForm(f) {
   // Mettre à jour l'affichage m/kg après chargement
   convertTitrage('chaine');
   convertTitrage('trame');
-  initOurdissageForm(f.ourdissage || []);
+  syncOurdissageFromEnlissage();
   initLissesForm(f.lisses || {});
   // Charger le schéma : fermer l'éditeur, afficher l'aperçu
   const editorZone2  = document.getElementById('schema-editor-zone');
@@ -815,7 +849,7 @@ function collectFormData() {
     data[`titrage_${type}_mode`] = isMkg ? 'mkg' : 'nm';
     data[`titrage_${type}_mkg_direct`] = (isMkg && directEl) ? directEl.value : '';
   });
-  data.ourdissage = collectOurdissageData();
+  // L'ourdissage est recalculé automatiquement depuis schema_data, pas besoin de le sauvegarder séparément
   data.lisses = collectLissesData();
   // Sauvegarder le schéma interactif
   if (typeof SchemaEditor !== 'undefined') {
@@ -861,37 +895,11 @@ async function deleteFiche() {
 }
 
 // ─── TABLEAU OURDISSAGE (formulaire) ────────────────────────
-let NB_OURDISSAGE_COLS = 16;
+// ─── TABLEAU OURDISSAGE (lecture seule, généré automatiquement depuis BlocsEnlissage) ─────────────
 
-// Génère le thead du tableau d'ourdissage
-function _renderOurdissageThead(cols) {
-  const thead = document.getElementById('ourdissage-thead');
-  if (!thead) return;
-  let ths = '<th>Couleur</th>';
-  for (let i = 1; i <= cols; i++) ths += `<th>${i}</th>`;
-  ths += '<th>=</th><th></th>';
-  thead.innerHTML = `<tr>${ths}</tr>`;
-}
-
-// Redimensionne le tableau (change le nombre de colonnes en conservant les données)
-function resizeOurdissage() {
-  const input = document.getElementById('ourdissage-nb-cols');
-  if (!input) return;
-  const newCols = Math.max(4, Math.min(48, parseInt(input.value) || 16));
-  input.value = newCols;
-  // Sauvegarder les données actuelles
-  const current = collectOurdissageData();
-  NB_OURDISSAGE_COLS = newCols;
-  _renderOurdissageThead(newCols);
-  initOurdissageForm(current);
-}
-
-// Synchronise le tableau d'ourdissage depuis BlocsEnlissage (chaîne uniquement).
-// Utilise les couleurs par occurrence (occurrenceColors[i]).
-// Groupe les fils CONSÉCUTIFS de même couleur en colonnes distinctes.
-// L'ordre des colonnes est de gauche à droite (groupe 0 = colonne 0).
-function syncOurdissageFromEnlissage() {
-  if (!BlocsEnlissage || !BlocsEnlissage._lastSequence || !BlocsEnlissage._lastSequence.length) return;
+// Construit les données d'ourdissage depuis BlocsEnlissage
+function buildOurdissageData() {
+  if (!BlocsEnlissage || !BlocsEnlissage._lastSequence || !BlocsEnlissage._lastSequence.length) return [];
 
   const fullSeq  = BlocsEnlissage._lastSequence;
   const blocMap  = {};
@@ -899,140 +907,70 @@ function syncOurdissageFromEnlissage() {
   const defaults = BlocsEnlissage._defaultColors;
   const occColors = BlocsEnlissage.occurrenceColors || [];
 
-  // Étape 1 : construire la liste des fils avec leur couleur par occurrence
-  // Chaque occurrence dans fullSeq a sa propre couleur (occColors[i])
-  const filColors = []; // [{color, blocName}]
+  // Étape 1 : liste des fils avec leur couleur par occurrence
+  const filColors = [];
   fullSeq.forEach((t, i) => {
     const bloc = blocMap[t];
     if (!bloc) return;
     const bSize = bloc.size || bloc.pattern?.[0]?.length || 4;
     const color = occColors[i] || defaults[i % defaults.length];
-    for (let c = 0; c < bSize; c++) {
-      filColors.push({ color, blocName: t });
-    }
+    for (let c = 0; c < bSize; c++) filColors.push({ color, blocName: t });
   });
 
   // Étape 2 : grouper les fils CONSÉCUTIFS de même couleur
-  const groups = []; // [{color, nbFils, label}]
+  const groups = [];
   filColors.forEach(({ color, blocName }) => {
     const last = groups[groups.length - 1];
-    if (last && last.color === color) {
-      last.nbFils++;
-    } else {
-      groups.push({ color, nbFils: 1, label: `Bloc ${blocName}` });
-    }
+    if (last && last.color === color) { last.nbFils++; }
+    else { groups.push({ color, nbFils: 1, label: `Bloc ${blocName}` }); }
   });
 
   const nbCols = groups.length;
 
-  // Adapter le nombre de colonnes
-  if (NB_OURDISSAGE_COLS !== nbCols) {
-    NB_OURDISSAGE_COLS = nbCols;
-    _renderOurdissageThead(nbCols);
-    const inp = document.getElementById('ourdissage-nb-cols');
-    if (inp) inp.value = nbCols;
-  }
-
-  // Étape 3 : construire une ligne par couleur unique
-  // sequence[colIdx] = nbFils si ce groupe appartient à cette couleur, sinon ''
-  const colorMap = {}; // hex -> { couleur, hex, sequence[] }
+  // Étape 3 : une ligne par couleur unique
+  const colorMap = {};
   groups.forEach((g, gi) => {
     if (!colorMap[g.color]) {
-      colorMap[g.color] = {
-        couleur: g.label,
-        hex: g.color,
-        sequence: Array(nbCols).fill('')
-      };
+      colorMap[g.color] = { couleur: g.label, hex: g.color, sequence: Array(nbCols).fill('') };
     }
     colorMap[g.color].sequence[gi] = g.nbFils.toString();
   });
 
-  const newRows = Object.values(colorMap);
-  initOurdissageForm(newRows);
-  showToast('Tableau d\'ourdissage synchronisé.', 'info');
+  return Object.values(colorMap).map(r => ({
+    ...r,
+    total: r.sequence.reduce((s, v) => s + (parseInt(v) || 0), 0)
+  }));
 }
 
-// Crée une ligne du tableau d'ourdissage
-function _makeOurdissageRow(row, ri) {
-  const couleur = row.couleur || '';
-  const hex     = row.hex     || '#cccccc';
-  const seq     = row.sequence || [];
-  // Calcul auto du total : somme des valeurs numériques de la séquence
-  const autoTotal = seq.reduce((s, v) => s + (parseFloat(v) || 0), 0);
-  const total = row.total !== undefined && row.total !== '' ? row.total : (autoTotal > 0 ? autoTotal : '');
-  return `<tr>
-    <td style="white-space:nowrap; display:flex; align-items:center; gap:4px; border:none; padding:2px 4px;">
-      <input type="color" value="${hex}" style="width:26px; height:26px; padding:0; border:none; cursor:pointer; flex-shrink:0;" title="Couleur">
-      <input type="text" value="${couleur}" placeholder="Couleur ${ri+1}" style="width:80px;">
-    </td>
-    ${Array.from({length: NB_OURDISSAGE_COLS}, (_, ci) =>
-      `<td><input type="text" value="${seq[ci] || ''}" style="width:28px;" oninput="_updateOurdissageTotal(this)"></td>`
-    ).join('')}
-    <td><input type="number" value="${total}" style="width:50px; font-weight:600;" placeholder="=" readonly title="Total calculé automatiquement"></td>
-    <td style="border:none; padding:2px;"><button type="button" onclick="_removeOurdissageRow(this)" style="background:none; border:none; color:#c0392b; cursor:pointer; font-size:1rem; line-height:1;" title="Supprimer cette ligne">×</button></td>
-  </tr>`;
-}
+// Affiche le tableau d'ourdissage en lecture seule dans #ourdissage-display
+function syncOurdissageFromEnlissage() {
+  const container = document.getElementById('ourdissage-display');
+  if (!container) return;
 
-// Met à jour le total de la ligne quand une cellule change
-function _updateOurdissageTotal(inputEl) {
-  const tr = inputEl.closest('tr');
-  if (!tr) return;
-  const seqInputs = Array.from(tr.querySelectorAll('td:not(:first-child):not(:last-child):not(:nth-last-child(2)) input'));
-  const sum = seqInputs.reduce((s, el) => s + (parseFloat(el.value) || 0), 0);
-  const totalInput = tr.querySelector('td:nth-last-child(2) input');
-  if (totalInput) totalInput.value = sum > 0 ? sum : '';
-}
-
-// Supprime une ligne du tableau d'ourdissage
-function _removeOurdissageRow(btn) {
-  const tr = btn.closest('tr');
-  if (tr) tr.remove();
-}
-
-// Ajoute une ligne vide au tableau d'ourdissage
-function addOurdissageRow() {
-  const tbody = document.getElementById('ourdissage-tbody');
-  if (!tbody) return;
-  const ri = tbody.rows.length;
-  const div = document.createElement('tbody');
-  div.innerHTML = _makeOurdissageRow({ couleur: '', hex: '#cccccc', sequence: [], total: '' }, ri);
-  tbody.appendChild(div.firstElementChild);
-}
-
-function initOurdissageForm(data) {
-  const tbody = document.getElementById('ourdissage-tbody');
-  const defaultRows = [
-    { couleur: 'Couleur 1', hex: '#cccccc', sequence: [], total: '' },
-    { couleur: 'Couleur 2', hex: '#cccccc', sequence: [], total: '' },
-    { couleur: 'Couleur 3', hex: '#cccccc', sequence: [], total: '' },
-  ];
-  const rows = data.length > 0 ? data : defaultRows;
-  // Adapter NB_OURDISSAGE_COLS au nombre de colonnes sauvegardées
-  if (data.length > 0) {
-    const maxSeq = Math.max(...data.map(r => (r.sequence || []).length), NB_OURDISSAGE_COLS);
-    if (maxSeq !== NB_OURDISSAGE_COLS) {
-      NB_OURDISSAGE_COLS = maxSeq;
-      const input = document.getElementById('ourdissage-nb-cols');
-      if (input) input.value = maxSeq;
-    }
+  const rows = buildOurdissageData();
+  if (!rows.length) {
+    container.innerHTML = '<p style="color:var(--color-text-muted); text-align:center; font-style:italic;">Appliquez une séquence d\'enlissage pour générer le tableau.</p>';
+    return;
   }
-  _renderOurdissageThead(NB_OURDISSAGE_COLS);
-  tbody.innerHTML = rows.map((row, ri) => _makeOurdissageRow(row, ri)).join('');
+
+  const nbCols = Math.max(...rows.map(r => (r.sequence || []).length), 1);
+  const thead = `<thead><tr><th>Couleur</th>${Array.from({length: nbCols}, (_, i) => `<th>${i+1}</th>`).join('')}<th>=</th></tr></thead>`;
+  const tbody = `<tbody>${rows.map(r => `
+    <tr>
+      <td class="color-label" style="white-space:nowrap;">
+        <span style="display:inline-block;width:14px;height:14px;background:${r.hex};border-radius:2px;margin-right:4px;vertical-align:middle;"></span>
+        ${r.couleur || r.hex || ''}
+      </td>
+      ${Array.from({length: nbCols}, (_, i) => `<td>${r.sequence?.[i] || ''}</td>`).join('')}
+      <td><strong>${r.total || ''}</strong></td>
+    </tr>`).join('')}</tbody>`;
+
+  container.innerHTML = `<div style="overflow-x:auto;"><table class="ourdissage-table">${thead}${tbody}</table></div>`;
 }
 
-function collectOurdissageData() {
-  const rows = $$('#ourdissage-tbody tr');
-  return rows.map(tr => {
-    const allInputs = $$('input', tr);
-    // allInputs[0] = color picker (type=color), allInputs[1] = nom couleur,
-    // allInputs[2..17] = séquence, allInputs[18] = total
-    const hex      = allInputs[0] ? allInputs[0].value : '#cccccc';
-    const couleur  = allInputs[1] ? allInputs[1].value : '';
-    const sequence = Array.from({length: NB_OURDISSAGE_COLS}, (_, i) => allInputs[i + 2] ? allInputs[i + 2].value : '');
-    const total    = allInputs[NB_OURDISSAGE_COLS + 2] ? allInputs[NB_OURDISSAGE_COLS + 2].value : '';
-    return { hex, couleur, sequence, total };
-  }).filter(r => r.couleur || r.sequence.some(v => v) || r.total);
-}
+// Stub vide pour compatibilité (plus de formulaire éditable)
+function initOurdissageForm(data) { syncOurdissageFromEnlissage(); }
+function collectOurdissageData() { return buildOurdissageData(); }
 
 // ─── TABLEAU LISSES (formulaire) ────────────────────────────
 function initLissesForm(data) {
