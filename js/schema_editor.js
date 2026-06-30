@@ -686,6 +686,7 @@ const BlocsEnlissage = {
     this.occurrenceColors[idx] = color;
     this._applyColorsToGrid();
     this.renderBand();
+    SchemaEditor.renderDrawdown();
     // Sauvegarder dans le champ caché et mettre à jour la préview
     SchemaEditor.saveToHiddenField();
     updateSchemaPreview();
@@ -844,16 +845,13 @@ const BlocsEnlissage = {
     if (!container) return;
     const colMap = this._buildColMap();
     const cells = container.querySelectorAll('.schema-cell');
-    const cols = SchemaEditor.cols;
     cells.forEach(cell => {
       const c = parseInt(cell.dataset.c);
       const isFilled = cell.classList.contains('filled');
-      if (isFilled && colMap[c]) {
-        cell.style.background = colMap[c];
-        cell.style.borderColor = colMap[c];
-      } else if (isFilled) {
-        cell.style.background = '';
-        cell.style.borderColor = '';
+      if (isFilled) {
+        const color = colMap[c] || 'var(--color-text)';
+        cell.style.background = color;
+        cell.style.borderColor = color;
       } else {
         cell.style.background = '';
         cell.style.borderColor = '';
@@ -1206,6 +1204,7 @@ const BlocsTrame = {
     this.occurrenceColors[idx] = color;
     this._applyColorsToGrid();
     this.renderBand();
+    SchemaEditor.renderDrawdown();
     SchemaEditor.saveToHiddenField();
     updateSchemaPreview();
   },
@@ -1360,9 +1359,10 @@ const BlocsTrame = {
     cells.forEach(cell => {
       const r = parseInt(cell.dataset.r);
       const isFilled = cell.classList.contains('filled');
-      if (isFilled && rowMap[r]) {
-        cell.style.background = rowMap[r];
-        cell.style.borderColor = rowMap[r];
+      if (isFilled) {
+        const color = rowMap[r] || 'var(--color-text)';
+        cell.style.background = color;
+        cell.style.borderColor = color;
       } else {
         cell.style.background = '';
         cell.style.borderColor = '';
