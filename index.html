@@ -458,6 +458,31 @@
               </div>
             </div>
 
+            <!-- Blocs de trame -->
+            <div id="blocs-trame-panel" style="background:var(--color-bg-card,#f8f6f2); border:1px solid var(--color-border-light,#e0d8cc); border-radius:6px; padding:0.75rem; margin-bottom:0.75rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                <strong style="font-size:0.85rem;">Blocs de trame</strong>
+                <button type="button" class="btn btn-sm" onclick="toggleBlocsTramePanel()" id="btn-blocs-trame-toggle" style="font-size:0.7rem;">Masquer</button>
+              </div>
+              <div id="blocs-trame-body">
+                <p style="font-size:0.78rem; color:var(--color-text-muted); margin:0 0 0.5rem;">Définissez un ou plusieurs blocs de trame (A, B, C…), chaque bloc contient une séquence de couleurs par duite. Appliquez-les en séquence pour remplir automatiquement la bande de trame.</p>
+                <div id="trame-blocs-list" style="display:flex; flex-direction:column; gap:0.4rem; margin-bottom:0.5rem;"></div>
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+                  <button type="button" class="btn btn-sm" onclick="addBlocTrame()">+ Nouveau bloc</button>
+                </div>
+                <div style="margin-top:0.6rem; border-top:1px solid var(--color-border-light,#e0d8cc); padding-top:0.5rem;">
+                  <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.3rem;">Séquence de répétition :</label>
+                  <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+                    <input type="text" id="trame-sequence" placeholder="Ex : A B A B ou A A B A A B" style="flex:1; min-width:140px; font-family:monospace;">
+                    <input type="number" id="trame-repeat" value="1" min="1" max="200" style="width:55px;" title="Nombre de fois que la séquence est répétée">
+                    <span style="font-size:0.78rem; color:var(--color-text-muted);">répétition(s)</span>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="applyBlocsTrame()">Appliquer</button>
+                  </div>
+                  <div style="font-size:0.75rem; color:var(--color-text-muted); margin-top:0.3rem;">Le résultat écrase la bande de trame actuelle. Ajustez ensuite manuellement si besoin.</div>
+                </div>
+              </div>
+            </div>
+
             <!-- Conteneur du draft -->
             <div class="draft-scroll-wrapper">
             <div class="draft-container" id="draft-container">
@@ -487,31 +512,6 @@
 
             <!-- Zone d'alertes de validation du schéma -->
             <div id="schema-validation" style="margin-top:0.75rem;"></div>
-
-            <!-- Blocs de trame -->
-            <div id="blocs-trame-panel" style="background:var(--color-bg-card,#f8f6f2); border:1px solid var(--color-border-light,#e0d8cc); border-radius:6px; padding:0.75rem; margin-top:0.75rem;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-                <strong style="font-size:0.85rem;">Blocs de trame</strong>
-                <button type="button" class="btn btn-sm" onclick="toggleBlocsTramePanel()" id="btn-blocs-trame-toggle" style="font-size:0.7rem;">Masquer</button>
-              </div>
-              <div id="blocs-trame-body">
-                <p style="font-size:0.78rem; color:var(--color-text-muted); margin:0 0 0.5rem;">Définissez un ou plusieurs blocs de trame (A, B, C…), chaque bloc contient une séquence de couleurs par duite. Appliquez-les en séquence pour remplir automatiquement la bande de trame.</p>
-                <div id="trame-blocs-list" style="display:flex; flex-direction:column; gap:0.4rem; margin-bottom:0.5rem;"></div>
-                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-                  <button type="button" class="btn btn-sm" onclick="addBlocTrame()">+ Nouveau bloc</button>
-                </div>
-                <div style="margin-top:0.6rem; border-top:1px solid var(--color-border-light,#e0d8cc); padding-top:0.5rem;">
-                  <label style="font-size:0.8rem; font-weight:600; display:block; margin-bottom:0.3rem;">Séquence de répétition :</label>
-                  <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
-                    <input type="text" id="trame-sequence" placeholder="Ex : A B A B ou A A B A A B" style="flex:1; min-width:140px; font-family:monospace;">
-                    <input type="number" id="trame-repeat" value="1" min="1" max="200" style="width:55px;" title="Nombre de fois que la séquence est répétée">
-                    <span style="font-size:0.78rem; color:var(--color-text-muted);">répétition(s)</span>
-                    <button type="button" class="btn btn-sm btn-primary" onclick="applyBlocsTrame()">Appliquer</button>
-                  </div>
-                  <div style="font-size:0.75rem; color:var(--color-text-muted); margin-top:0.3rem;">Le résultat écrase la bande de trame actuelle. Ajustez ensuite manuellement si besoin.</div>
-                </div>
-              </div>
-            </div>
 
           </div><!-- /#schema-editor-zone -->
 
