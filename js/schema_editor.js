@@ -64,6 +64,75 @@ const SchemaEditor = {
     BlocsTrame._applyColorsToGrid();
     // Bande couleur trame
     BlocsTrame.renderBand();
+    // Motif (drawdown)
+    this.renderDrawdown();
+  },
+
+  // Calcule et affiche le motif central (drawdown) : grille fils × duites
+  // Chaque case est colorée selon que la chaîne ou la trame passe dessus.
+  // Convention : si l'attachage[cadre][pédale] est actif → chaîne dessus (couleur fil)
+  //              sinon → trame dessus (couleur duite)
+  renderDrawdown() {
+    const container = document.getElementById('grid-drawdown');
+    if (!container) return;
+
+    const cellSize = this._cellSize || 14;
+    const rows = this.rows;    // nb de duites
+    const cols = this.cols;    // nb de fils
+
+    // Couleur par fil (chaîne) depuis BlocsEnlissage
+    const colMap = (BlocsEnlissage._lastSequence && BlocsEnlissage._lastSequence.length)
+      ? BlocsEnlissage._buildColMap()
+      : {};
+    // Couleur par duite (trame) depuis BlocsTrame
+    const rowMap = (BlocsTrame._lastSequence && BlocsTrame._lastSequence.length)
+      ? BlocsTrame._buildRowMap()
+      : {};
+
+    // Couleurs de repli si aucun bloc n'est défini
+    const defaultChaine = '#1a1a2e';
+    const defaultTrame  = '#e8e0d0';
+
+    container.innerHTML = '';
+    container.style.display = 'grid';
+    container.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
+    container.style.gridTemplateRows    = `repeat(${rows}, ${cellSize}px)`;
+    container.style.gap = '1px';
+    container.style.cursor = 'default';
+
+    for (let r = 0; r < rows; r++) {
+      // Trouver la pédale activée pour cette duite
+      let activeTreadle = -1;
+      for (let t = 0; t < this.treadles; t++) {
+        if (this.pedalage[r]?.[t]) { activeTreadle = t; break; }
+      }
+
+      for (let c = 0; c < cols; c++) {
+        const cell = document.createElement('div');
+        cell.style.width  = cellSize + 'px';
+        cell.style.height = cellSize + 'px';
+
+        // Trouver le cadre activé pour ce fil
+        let activeShaft = -1;
+        for (let s = 0; s < this.shafts; s++) {
+          if (this.enlissage[s]?.[c]) { activeShaft = s; break; }
+        }
+
+        // Déterminer si la chaîne passe dessus
+        let chaineOnTop = false;
+        if (activeShaft >= 0 && activeTreadle >= 0) {
+          chaineOnTop = !!this.attachage[activeShaft]?.[activeTreadle];
+        }
+
+        if (chaineOnTop) {
+          cell.style.background = colMap[c] || defaultChaine;
+        } else {
+          cell.style.background = rowMap[r] || defaultTrame;
+        }
+
+        container.appendChild(cell);
+      }
+    }
   },
 
   _renderGrid(containerId, data, rows, cols, gridName) {
