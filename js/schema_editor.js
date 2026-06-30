@@ -56,6 +56,7 @@ const SchemaEditor = {
     this._renderGrid('grid-attachage',  this.attachage,  this.shafts, this.treadles, 'attachage');
     // Pédalage : duites × pédales
     this._renderGrid('grid-pedalage',   this.pedalage,   this.rows,   this.treadles, 'pedalage');
+    BlocsTrame._applyColorsToGrid();
     // Bande couleur trame
     BlocsTrame.renderBand();
   },
