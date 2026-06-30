@@ -385,7 +385,7 @@ function calcRecapMatieres(f) {
         trSeq.forEach((t, i) => {
           const bloc = trBlocMap[t];
           if (!bloc) return;
-          const bSize = bloc.size || bloc.pattern?.[0]?.length || 4;
+          const bSize = bloc.size || bloc.pattern?.length || 4; // nb de duites = nb de lignes
           const color = trOccColors[i] || trDefaults[i % trDefaults.length];
           for (let r = 0; r < bSize; r++) trRowMap[trRowIdx + r] = color;
           trRowIdx += bSize;
