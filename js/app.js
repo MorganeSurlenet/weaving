@@ -407,7 +407,7 @@ function calcRecapMatieres(f) {
             couleur: '',
             hex: g.hex,
             usage: 'Trame',
-            nbFils: g.count + ' duites',
+            nbFils: g.count,
             longTotale_m: longTotale,
             poids_g
           });
