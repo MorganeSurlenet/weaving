@@ -766,7 +766,6 @@ textarea { resize: vertical; min-height: 80px; }
 }
 
 .schema-cell.filled {
-  background: var(--color-text);
   border-color: var(--color-text);
 }
 
