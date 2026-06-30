@@ -886,8 +886,9 @@ function resizeOurdissage() {
   initOurdissageForm(current);
 }
 
-// Synchronise le tableau d'ourdissage depuis BlocsEnlissage (modèle : colors[] par fil + colOverrides).
-// Groupe les fils CONSECUTIFS de même couleur en colonnes distinctes.
+// Synchronise le tableau d'ourdissage depuis BlocsEnlissage (chaîne uniquement).
+// Utilise les couleurs par occurrence (occurrenceColors[i]).
+// Groupe les fils CONSÉCUTIFS de même couleur en colonnes distinctes.
 // L'ordre des colonnes est de gauche à droite (groupe 0 = colonne 0).
 function syncOurdissageFromEnlissage() {
   if (!BlocsEnlissage || !BlocsEnlissage._lastSequence || !BlocsEnlissage._lastSequence.length) return;
@@ -896,21 +897,19 @@ function syncOurdissageFromEnlissage() {
   const blocMap  = {};
   BlocsEnlissage.blocs.forEach(b => { blocMap[b.name] = b; });
   const defaults = BlocsEnlissage._defaultColors;
+  const occColors = BlocsEnlissage.occurrenceColors || [];
 
-  // Étape 1 : construire la liste des fils avec leur couleur effective (override > bloc > défaut)
+  // Étape 1 : construire la liste des fils avec leur couleur par occurrence
+  // Chaque occurrence dans fullSeq a sa propre couleur (occColors[i])
   const filColors = []; // [{color, blocName}]
-  let col = 0;
-  fullSeq.forEach(t => {
+  fullSeq.forEach((t, i) => {
     const bloc = blocMap[t];
     if (!bloc) return;
-    const bSize = bloc.size || bloc.colors?.length || 4;
+    const bSize = bloc.size || bloc.pattern?.[0]?.length || 4;
+    const color = occColors[i] || defaults[i % defaults.length];
     for (let c = 0; c < bSize; c++) {
-      const override   = BlocsEnlissage.colOverrides?.[col + c];
-      const stepColor  = bloc.colors?.[c];
-      const color      = override || stepColor || defaults[(col + c) % defaults.length];
       filColors.push({ color, blocName: t });
     }
-    col += bSize;
   });
 
   // Étape 2 : grouper les fils CONSÉCUTIFS de même couleur
