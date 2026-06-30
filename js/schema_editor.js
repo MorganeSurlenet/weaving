@@ -1423,25 +1423,29 @@ const BlocsTrame = {
     const tokens = sequenceStr.trim().toUpperCase().split(/\s+/).filter(Boolean);
     if (tokens.length === 0) { showToast('Entrez une séquence (ex : A B A B).', 'error'); return; }
 
+    // Vérifier que tous les tokens correspondent à un bloc
     const blocMap = {};
     this.blocs.forEach(b => { blocMap[b.name] = b; });
     for (const t of tokens) {
       if (!blocMap[t]) { showToast(`Bloc "${t}" non défini.`, 'error'); return; }
     }
 
+    // Construire la séquence complète
     const fullSeq = [];
     for (let i = 0; i < repeat; i++) fullSeq.push(...tokens);
     this._lastSequence = fullSeq;
 
-    // Initialiser les couleurs d'occurrences manquantes
+    // Initialiser les couleurs d'occurrences manquantes avec les couleurs par défaut
     for (let i = 0; i < fullSeq.length; i++) {
       if (!this.occurrenceColors[i]) {
         this.occurrenceColors[i] = this._defaultColors[i % this._defaultColors.length];
       }
     }
+    // Tronquer si la séquence est plus courte
     this.occurrenceColors = this.occurrenceColors.slice(0, fullSeq.length);
 
-    // Calculer le nombre total de duites (size = nb de lignes = nb de duites)
+    // Calculer le nombre total de duites nécessaires
+    // (miroir de BlocsEnlissage : size = nb de duites, comme size = nb de fils pour la chaîne)
     const totalRows = fullSeq.reduce((s, t) => s + (blocMap[t].size || blocMap[t].pattern.length || 4), 0);
     const treadles = SchemaEditor.treadles;
 
@@ -1453,18 +1457,20 @@ const BlocsTrame = {
       SchemaEditor.initData(false);
     }
 
-    // Réinitialiser le pédalage
+    // Réinitialiser toute la grille de pédalage à false
     for (let r = 0; r < totalRows; r++)
-      SchemaEditor.pedalage[r] = Array(treadles).fill(false);
+      for (let c = 0; c < treadles; c++)
+        SchemaEditor.pedalage[r][c] = false;
 
-    // Remplir le pédalage depuis les blocs
-    // pattern[duite][pédale] — on copie directement
+    // Remplir le pédalage de haut en bas (duite 0 = première duite en haut)
     let row = 0;
     for (const t of fullSeq) {
       const bloc = blocMap[t];
       const bSize = bloc.size || bloc.pattern.length || 4;
       for (let d = 0; d < bSize; d++) {
-        SchemaEditor.pedalage[row + d] = Array.from({length: treadles}, (_, p) => bloc.pattern[d]?.[p] || false);
+        for (let c = 0; c < treadles; c++) {
+          SchemaEditor.pedalage[row + d][c] = bloc.pattern[d]?.[c] || false;
+        }
       }
       row += bSize;
     }
@@ -1481,7 +1487,7 @@ const BlocsTrame = {
     SchemaEditor.render();
     SchemaEditor.saveToHiddenField();
     this.renderBand();
-    showToast(`Pédalage rempli : ${totalRows} duites en ${fullSeq.length} blocs.`, 'success');
+    showToast(`Pédalage rempli : ${totalRows} duites en ${fullSeq.length} blocs.`, 'success');
   }
 };
 
