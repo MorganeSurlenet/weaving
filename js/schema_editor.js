@@ -1441,8 +1441,8 @@ const BlocsTrame = {
     }
     this.occurrenceColors = this.occurrenceColors.slice(0, fullSeq.length);
 
-    // Calculer le nombre total de duites
-    const totalRows = fullSeq.reduce((s, t) => s + (blocMap[t].size || blocMap[t].pattern[0]?.length || 4), 0);
+    // Calculer le nombre total de duites (size = nb de lignes = nb de duites)
+    const totalRows = fullSeq.reduce((s, t) => s + (blocMap[t].size || blocMap[t].pattern.length || 4), 0);
     const treadles = SchemaEditor.treadles;
 
     // Redimensionner le pédalage si nécessaire
