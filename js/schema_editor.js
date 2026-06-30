@@ -1137,9 +1137,10 @@ const BlocsTrame = {
   renderBand() {
     const band = document.getElementById('trame-band');
     if (!band || !this._lastSequence || !this._lastSequence.length) return;
-    // cellSize identique à _renderGrid : basé sur cols (pas rows) pour que les segments
-    // aient exactement la même hauteur que les cases de la grille de pédalage
-    const cellSize = SchemaEditor.cols > 32 ? 10 : SchemaEditor.cols > 20 ? 12 : 14;
+    // cellSize identique à _renderGrid pour la grille pédalage :
+    // la grille pédalage est rendue avec cols = treadles (pas cols = fils)
+    // donc cellSize doit être basé sur treadles
+    const cellSize = SchemaEditor.treadles > 32 ? 10 : SchemaEditor.treadles > 20 ? 12 : 14;
     const blocMap = {};
     this.blocs.forEach(b => { blocMap[b.name] = b; });
     band.innerHTML = '';
