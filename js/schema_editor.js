@@ -532,6 +532,18 @@ function closeSchemaEditor() {
 
 // ─── BLOCS D'ENLISSAGE ──────────────────────────────────────────────────────
 
+// Retourne toutes les couleurs uniques utilisées dans les deux systèmes (chaîne + trame)
+// Déclarée ici pour être accessible dans BlocsEnlissage et BlocsTrame via hoisting
+function _getAllUsedColors() {
+  const enlColors = (typeof BlocsEnlissage !== 'undefined' && BlocsEnlissage._lastSequence || []).map((_, i) =>
+    BlocsEnlissage.occurrenceColors[i] || BlocsEnlissage._defaultColors[i % BlocsEnlissage._defaultColors.length]
+  );
+  const trameColors = (typeof BlocsTrame !== 'undefined' && BlocsTrame._lastSequence || []).map((_, i) =>
+    BlocsTrame.occurrenceColors[i] || BlocsTrame._defaultColors[i % BlocsTrame._defaultColors.length]
+  );
+  return [...new Set([...enlColors, ...trameColors])];
+}
+
 // Stockage des blocs définis par l'utilisateur
 // Chaque bloc : { name: 'A', pattern: [[bool, bool, ...], ...] }  (rows=cadres, cols=nb fils du bloc)
 const BlocsEnlissage = {
@@ -589,8 +601,8 @@ const BlocsEnlissage = {
     band.innerHTML = '';
     band.style.gap = '1px';
 
-    // Collecter les couleurs uniques déjà utilisées dans la séquence
-    const usedColors = [...new Set(
+    // Collecter toutes les couleurs utilisées (chaîne + trame)
+    const usedColors = typeof _getAllUsedColors === 'function' ? _getAllUsedColors() : [...new Set(
       this._lastSequence.map((_, i) => this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length])
     )];
 
@@ -1078,7 +1090,8 @@ const BlocsTrame = {
     band.innerHTML = '';
     band.style.gap = '1px';
 
-    const usedColors = [...new Set(
+    // Collecter toutes les couleurs utilisées (chaîne + trame)
+    const usedColors = typeof _getAllUsedColors === 'function' ? _getAllUsedColors() : [...new Set(
       this._lastSequence.map((_, i) => this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length])
     )];
 
