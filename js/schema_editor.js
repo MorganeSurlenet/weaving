@@ -1080,10 +1080,11 @@ const BlocsTrame = {
     updateSchemaPreview();
   },
 
-  // Bande colorée à droite du pédalage (segments par occurrence)
+  // Bande colorée à droite du pédalage (segments par occurrence) — miroir vertical de BlocsEnlissage.renderBand
   renderBand() {
     const band = document.getElementById('trame-band');
     if (!band || !this._lastSequence || !this._lastSequence.length) return;
+    // cellSize basé sur le nombre de lignes (rows) comme dans _renderGrid pour le pédalage
     const cellSize = SchemaEditor.rows > 32 ? 10 : SchemaEditor.rows > 20 ? 12 : 14;
     const blocMap = {};
     this.blocs.forEach(b => { blocMap[b.name] = b; });
@@ -1100,6 +1101,7 @@ const BlocsTrame = {
       if (!bloc) return;
       const bSize = bloc.size || bloc.pattern.length || 4; // nb de duites
       const color = this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length];
+      // Hauteur du segment = bSize cellules + (bSize-1) gaps internes d'1px (identique à BlocsEnlissage)
       const segH = bSize * cellSize + (bSize - 1);
 
       const seg = document.createElement('div');
@@ -1114,22 +1116,26 @@ const BlocsTrame = {
       const idx = i;
       seg.addEventListener('click', (e) => {
         e.stopPropagation();
+        // Fermer tout popover existant
         document.querySelectorAll('._trame-popover').forEach(p => p.remove());
 
         const pop = document.createElement('div');
         pop.className = '_trame-popover';
         pop.style.cssText = 'position:fixed; z-index:9999; background:#fff; border:1px solid #ccc; border-radius:6px; padding:8px; box-shadow:0 4px 16px rgba(0,0,0,0.18); display:flex; flex-direction:column; gap:6px; min-width:160px;';
 
+        // Titre
         const title = document.createElement('div');
         title.style.cssText = 'font-size:0.75rem; font-weight:600; color:#555; margin-bottom:2px;';
         title.textContent = `Couleur — Bloc ${t} (occ. ${i + 1})`;
         pop.appendChild(title);
 
+        // Palette des couleurs déjà utilisées
         if (usedColors.length > 0) {
           const palLbl = document.createElement('div');
           palLbl.style.cssText = 'font-size:0.7rem; color:#888;';
           palLbl.textContent = 'Couleurs existantes :';
           pop.appendChild(palLbl);
+
           const pal = document.createElement('div');
           pal.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px;';
           usedColors.forEach(c => {
@@ -1147,11 +1153,12 @@ const BlocsTrame = {
           pop.appendChild(pal);
         }
 
+        // Bouton picker natif
         const pickerRow = document.createElement('div');
         pickerRow.style.cssText = 'display:flex; align-items:center; gap:6px; margin-top:2px;';
         const pickerLbl = document.createElement('label');
         pickerLbl.style.cssText = 'font-size:0.75rem; color:#555; cursor:pointer; display:flex; align-items:center; gap:4px;';
-        pickerLbl.textContent = 'Autre couleur\u2026';
+        pickerLbl.textContent = 'Autre couleur…';
         const pickerInp = document.createElement('input');
         pickerInp.type = 'color';
         pickerInp.value = color;
@@ -1165,6 +1172,7 @@ const BlocsTrame = {
         pickerRow.appendChild(pickerLbl);
         pop.appendChild(pickerRow);
 
+        // Positionner le popover sous le segment
         document.body.appendChild(pop);
         const rect = seg.getBoundingClientRect();
         let left = rect.left;
@@ -1174,6 +1182,7 @@ const BlocsTrame = {
         pop.style.left = left + 'px';
         pop.style.top  = top  + 'px';
 
+        // Fermer si clic en dehors du popover (avec délai pour éviter auto-fermeture)
         setTimeout(() => {
           const closeHandler = (ev) => {
             if (!pop.contains(ev.target)) {
