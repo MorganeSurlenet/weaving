@@ -1030,8 +1030,9 @@ const BlocsTrame = {
   add() {
     const name = this._nextLetter();
     const treadles = SchemaEditor.treadles;
-    const size = 4;
-    const pattern = Array.from({length: treadles}, () => Array(size).fill(false));
+    const size = 4; // nb de duites
+    // pattern[duite][pédale] — size lignes × treadles colonnes
+    const pattern = Array.from({length: size}, () => Array(treadles).fill(false));
     this.blocs.push({ name, pattern, size });
     this.render();
   },
@@ -1197,8 +1198,8 @@ const BlocsTrame = {
   toggle(name, r, c) {
     const bloc = this.blocs.find(b => b.name === name);
     if (!bloc) return;
-    // Règle pédalage : 1 seule pédale par duite (colonne)
-    for (let row = 0; row < bloc.pattern.length; row++) bloc.pattern[row][c] = false;
+    // Règle : 1 seule pédale par duite (1 case par ligne)
+    bloc.pattern[r] = Array(bloc.pattern[r].length).fill(false);
     bloc.pattern[r][c] = true;
     this.render();
   },
@@ -1208,8 +1209,9 @@ const BlocsTrame = {
     if (!bloc) return;
     const treadles = SchemaEditor.treadles;
     bloc.size = newSize;
-    bloc.pattern = Array.from({length: treadles}, (_, r) =>
-      Array.from({length: newSize}, (_, c) => bloc.pattern[r]?.[c] || false)
+    // pattern[duite][pédale] — newSize lignes × treadles colonnes
+    bloc.pattern = Array.from({length: newSize}, (_, r) =>
+      Array.from({length: treadles}, (_, c) => bloc.pattern[r]?.[c] || false)
     );
     this.render();
   },
@@ -1246,14 +1248,14 @@ const BlocsTrame = {
       labelCol.appendChild(delBtn);
       wrap.appendChild(labelCol);
 
-      // Grille du bloc (pédales × duites)
+      // Grille du bloc (duites en lignes × pédales en colonnes)
       const gridEl = document.createElement('div');
-      gridEl.style.cssText = `display:grid; grid-template-columns:repeat(${size},${cellPx}px); grid-template-rows:repeat(${treadles},${cellPx}px); gap:1px; cursor:crosshair;`;
-      for (let r = 0; r < treadles; r++) {
-        for (let c = 0; c < size; c++) {
+      gridEl.style.cssText = `display:grid; grid-template-columns:repeat(${treadles},${cellPx}px); grid-template-rows:repeat(${size},${cellPx}px); gap:1px; cursor:crosshair;`;
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < treadles; c++) {
           const cell = document.createElement('div');
-          cell.className = 'schema-cell' + (bloc.pattern[r][c] ? ' filled' : '');
-          cell.title = `Pédale ${r+1}, duite ${c+1}`;
+          cell.className = 'schema-cell' + (bloc.pattern[r]?.[c] ? ' filled' : '');
+          cell.title = `Duite ${r+1}, pédale ${c+1}`;
           const bName = bloc.name, br = r, bc = c;
           cell.addEventListener('mousedown', e => { e.preventDefault(); BlocsTrame.toggle(bName, br, bc); });
           gridEl.appendChild(cell);
@@ -1334,23 +1336,18 @@ const BlocsTrame = {
       SchemaEditor.initData(false);
     }
 
-    // Remplir le pédalage
-    for (let r = 0; r < treadles; r++)
-      for (let c = 0; c < totalRows; c++)
-        SchemaEditor.pedalage[r] = SchemaEditor.pedalage[r] || [];
-
     // Réinitialiser le pédalage
     for (let r = 0; r < totalRows; r++)
       SchemaEditor.pedalage[r] = Array(treadles).fill(false);
 
+    // Remplir le pédalage depuis les blocs
+    // pattern[duite][pédale] — on copie directement
     let row = 0;
     for (const t of fullSeq) {
       const bloc = blocMap[t];
-      const bSize = bloc.size || bloc.pattern[0]?.length || 4;
-      for (let c = 0; c < bSize; c++) {
-        for (let r = 0; r < treadles; r++) {
-          SchemaEditor.pedalage[row + c][r] = bloc.pattern[r]?.[c] || false;
-        }
+      const bSize = bloc.size || bloc.pattern.length || 4;
+      for (let d = 0; d < bSize; d++) {
+        SchemaEditor.pedalage[row + d] = Array.from({length: treadles}, (_, p) => bloc.pattern[d]?.[p] || false);
       }
       row += bSize;
     }
