@@ -637,134 +637,104 @@ const BlocsEnlissage = {
       this._lastSequence.map((_, i) => this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length])
     )];
 
-    // Construire la map colonne → couleur effective (avec surcharges)
-    const colMap = this._buildColMap();
-
-    // Afficher une pastille par fil (pas un segment par bloc)
-    let globalCol = 0;
     this._lastSequence.forEach((t, i) => {
       const bloc = blocMap[t];
       if (!bloc) return;
       const bSize = bloc.size || bloc.pattern[0]?.length || 4;
-      const baseColor = this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length];
+      const color = this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length];
+      const segW = bSize * cellSize + (bSize - 1);
 
-      for (let f = 0; f < bSize; f++) {
-        const colIdx = globalCol + f;
-        const effectiveColor = colMap[colIdx] !== undefined ? colMap[colIdx] : baseColor;
-        const hasOverride = this.colOverrideColors[colIdx] !== undefined;
+      const seg = document.createElement('div');
+      seg.title = `Cliquer pour changer la couleur (occurrence ${i + 1} — Bloc ${t})`;
+      seg.style.cssText = `width:${segW}px; height:20px; background:${color}; border-radius:2px; flex-shrink:0; position:relative; cursor:pointer;`;
 
-        const seg = document.createElement('div');
-        seg.title = `Fil ${colIdx + 1} (Bloc ${t}, occ. ${i + 1})${hasOverride ? ' — couleur individuelle' : ''}`;
-        seg.style.cssText = `width:${cellSize}px; height:20px; background:${effectiveColor}; flex-shrink:0; position:relative; cursor:pointer;${hasOverride ? ' outline:2px solid #fff; outline-offset:-2px;' : ''}`;
+      const lbl = document.createElement('span');
+      lbl.style.cssText = 'position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:#fff; text-shadow:0 0 2px rgba(0,0,0,0.6); pointer-events:none; z-index:1;';
+      lbl.textContent = bloc.name;
+      seg.appendChild(lbl);
 
-        // Petite lettre du bloc sur le premier fil de chaque occurrence
-        if (f === 0) {
-          const lbl = document.createElement('span');
-          lbl.style.cssText = 'position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:700; color:#fff; text-shadow:0 0 2px rgba(0,0,0,0.7); pointer-events:none; z-index:1;';
-          lbl.textContent = t;
-          seg.appendChild(lbl);
-        }
+      const idx = i;
+      seg.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Fermer tout popover existant
+        document.querySelectorAll('._blocs-popover').forEach(p => p.remove());
 
-        const capturedCol = colIdx;
-        const capturedOccIdx = i;
-        const capturedBaseColor = baseColor;
+        const pop = document.createElement('div');
+        pop.className = '_blocs-popover';
+        pop.style.cssText = 'position:fixed; z-index:9999; background:#fff; border:1px solid #ccc; border-radius:6px; padding:8px; box-shadow:0 4px 16px rgba(0,0,0,0.18); display:flex; flex-direction:column; gap:6px; min-width:160px;';
 
-        seg.addEventListener('click', (e) => {
-          e.stopPropagation();
-          // Fermer tout popover existant
-          document.querySelectorAll('._blocs-popover').forEach(p => p.remove());
+        // Titre
+        const title = document.createElement('div');
+        title.style.cssText = 'font-size:0.75rem; font-weight:600; color:#555; margin-bottom:2px;';
+        title.textContent = `Couleur — Bloc ${t} (occ. ${i + 1})`;
+        pop.appendChild(title);
 
-          const currentColor = BlocsEnlissage.colOverrideColors[capturedCol] !== undefined
-            ? BlocsEnlissage.colOverrideColors[capturedCol]
-            : capturedBaseColor;
+        // Palette des couleurs déjà utilisées
+        if (usedColors.length > 0) {
+          const palLbl = document.createElement('div');
+          palLbl.style.cssText = 'font-size:0.7rem; color:#888;';
+          palLbl.textContent = 'Couleurs existantes :';
+          pop.appendChild(palLbl);
 
-          const pop = document.createElement('div');
-          pop.className = '_blocs-popover';
-          pop.style.cssText = 'position:fixed; z-index:9999; background:#fff; border:1px solid #ccc; border-radius:6px; padding:8px; box-shadow:0 4px 16px rgba(0,0,0,0.18); display:flex; flex-direction:column; gap:6px; min-width:180px;';
-
-          // Titre
-          const title = document.createElement('div');
-          title.style.cssText = 'font-size:0.75rem; font-weight:600; color:#555; margin-bottom:2px;';
-          title.textContent = `Fil ${capturedCol + 1} — Bloc ${t} (occ. ${capturedOccIdx + 1})`;
-          pop.appendChild(title);
-
-          // Palette des couleurs déjà utilisées
-          if (usedColors.length > 0) {
-            const palLbl = document.createElement('div');
-            palLbl.style.cssText = 'font-size:0.7rem; color:#888;';
-            palLbl.textContent = 'Couleurs existantes :';
-            pop.appendChild(palLbl);
-
-            const pal = document.createElement('div');
-            pal.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px;';
-            usedColors.forEach(c => {
-              const swatch = document.createElement('div');
-              swatch.style.cssText = `width:22px; height:22px; background:${c}; border-radius:3px; cursor:pointer; border:2px solid ${c === currentColor ? '#333' : 'transparent'}; box-sizing:border-box;`;
-              swatch.title = c;
-              swatch.addEventListener('click', (ev) => {
-                ev.stopPropagation();
-                BlocsEnlissage.setColColor(capturedCol, c);
-                pop.remove();
-              });
-              pal.appendChild(swatch);
-            });
-            pop.appendChild(pal);
-          }
-
-          // Bouton picker natif
-          const pickerRow2 = document.createElement('div');
-          pickerRow2.style.cssText = 'display:flex; align-items:center; gap:6px; margin-top:2px;';
-          const pickerLbl = document.createElement('label');
-          pickerLbl.style.cssText = 'font-size:0.75rem; color:#555; cursor:pointer; display:flex; align-items:center; gap:4px;';
-          pickerLbl.textContent = 'Autre couleur…';
-          const pickerInp = document.createElement('input');
-          pickerInp.type = 'color';
-          pickerInp.value = currentColor;
-          pickerInp.style.cssText = 'width:28px; height:24px; padding:0; border:none; cursor:pointer; border-radius:3px;';
-          pickerInp.addEventListener('input', () => { BlocsEnlissage.setColColor(capturedCol, pickerInp.value); });
-          pickerInp.addEventListener('change', () => { pop.remove(); });
-          pickerLbl.appendChild(pickerInp);
-          pickerRow2.appendChild(pickerLbl);
-          pop.appendChild(pickerRow2);
-
-          // Bouton réinitialiser (supprimer la surcharge)
-          if (BlocsEnlissage.colOverrideColors[capturedCol] !== undefined) {
-            const resetBtn = document.createElement('button');
-            resetBtn.type = 'button';
-            resetBtn.textContent = 'Réinitialiser (couleur du bloc)';
-            resetBtn.style.cssText = 'font-size:0.7rem; padding:3px 6px; border:1px solid #ccc; border-radius:3px; background:#f5f5f5; cursor:pointer; color:#555;';
-            resetBtn.addEventListener('click', () => {
-              BlocsEnlissage.setColColor(capturedCol, null);
+          const pal = document.createElement('div');
+          pal.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px;';
+          usedColors.forEach(c => {
+            const swatch = document.createElement('div');
+            swatch.style.cssText = `width:22px; height:22px; background:${c}; border-radius:3px; cursor:pointer; border:2px solid ${c === color ? '#333' : 'transparent'}; box-sizing:border-box;`;
+            swatch.title = c;
+            swatch.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              seg.style.background = c;
+              BlocsEnlissage.setOccurrenceColor(idx, c);
               pop.remove();
             });
-            pop.appendChild(resetBtn);
-          }
+            pal.appendChild(swatch);
+          });
+          pop.appendChild(pal);
+        }
 
-          // Positionner le popover sous le segment
-          document.body.appendChild(pop);
-          const rect = seg.getBoundingClientRect();
-          let left = rect.left;
-          let top  = rect.bottom + 4;
-          if (left + pop.offsetWidth > window.innerWidth - 8) left = window.innerWidth - pop.offsetWidth - 8;
-          if (top + pop.offsetHeight > window.innerHeight - 8) top = rect.top - pop.offsetHeight - 4;
-          pop.style.left = left + 'px';
-          pop.style.top  = top  + 'px';
-
-          // Fermer si clic en dehors du popover
-          setTimeout(() => {
-            const closeHandler = (ev) => {
-              if (!pop.contains(ev.target)) {
-                pop.remove();
-                document.removeEventListener('mousedown', closeHandler);
-              }
-            };
-            document.addEventListener('mousedown', closeHandler);
-          }, 100);
+        // Bouton picker natif
+        const pickerRow = document.createElement('div');
+        pickerRow.style.cssText = 'display:flex; align-items:center; gap:6px; margin-top:2px;';
+        const pickerLbl = document.createElement('label');
+        pickerLbl.style.cssText = 'font-size:0.75rem; color:#555; cursor:pointer; display:flex; align-items:center; gap:4px;';
+        pickerLbl.textContent = 'Autre couleur…';
+        const pickerInp = document.createElement('input');
+        pickerInp.type = 'color';
+        pickerInp.value = color;
+        pickerInp.style.cssText = 'width:28px; height:24px; padding:0; border:none; cursor:pointer; border-radius:3px;';
+        pickerInp.addEventListener('input', () => {
+          seg.style.background = pickerInp.value;
+          BlocsEnlissage.setOccurrenceColor(idx, pickerInp.value);
         });
+        pickerInp.addEventListener('change', () => { pop.remove(); });
+        pickerLbl.appendChild(pickerInp);
+        pickerRow.appendChild(pickerLbl);
+        pop.appendChild(pickerRow);
 
-        band.appendChild(seg);
-      }
-      globalCol += bSize;
+        // Positionner le popover sous le segment
+        document.body.appendChild(pop);
+        const rect = seg.getBoundingClientRect();
+        let left = rect.left;
+        let top  = rect.bottom + 4;
+        if (left + pop.offsetWidth > window.innerWidth - 8) left = window.innerWidth - pop.offsetWidth - 8;
+        if (top + pop.offsetHeight > window.innerHeight - 8) top = rect.top - pop.offsetHeight - 4;
+        pop.style.left = left + 'px';
+        pop.style.top  = top  + 'px';
+
+        // Fermer si clic en dehors du popover (avec délai pour éviter auto-fermeture)
+        setTimeout(() => {
+          const closeHandler = (ev) => {
+            if (!pop.contains(ev.target)) {
+              pop.remove();
+              document.removeEventListener('mousedown', closeHandler);
+            }
+          };
+          document.addEventListener('mousedown', closeHandler);
+        }, 100);
+      });
+
+      band.appendChild(seg);
     });
   },
 
@@ -1179,134 +1149,105 @@ const BlocsTrame = {
       this._lastSequence.map((_, i) => this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length])
     )];
 
-    // Construire la map ligne → couleur effective (avec surcharges)
-    const rowMap = this._buildRowMap();
-
-    // Afficher une pastille par duite (pas un segment par bloc)
-    let globalRow = 0;
     this._lastSequence.forEach((t, i) => {
       const bloc = blocMap[t];
       if (!bloc) return;
-      const bSize = bloc.size || bloc.pattern.length || 4;
-      const baseColor = this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length];
+      const bSize = bloc.size || bloc.pattern.length || 4; // nb de duites
+      const color = this.occurrenceColors[i] || this._defaultColors[i % this._defaultColors.length];
+      // Hauteur du segment = bSize cellules + (bSize-1) gaps internes d'1px
+      const segH = bSize * cellSize + (bSize - 1);
 
-      for (let d = 0; d < bSize; d++) {
-        const rowIdx = globalRow + d;
-        const effectiveColor = rowMap[rowIdx] !== undefined ? rowMap[rowIdx] : baseColor;
-        const hasOverride = this.rowOverrideColors[rowIdx] !== undefined;
+      const seg = document.createElement('div');
+      seg.title = `Cliquer pour changer la couleur (occurrence ${i + 1} — Bloc ${t})`;
+      seg.style.cssText = `width:20px; height:${segH}px; background:${color}; border-radius:2px; flex-shrink:0; position:relative; cursor:pointer;`;
 
-        const seg = document.createElement('div');
-        seg.title = `Duite ${rowIdx + 1} (Bloc ${t}, occ. ${i + 1})${hasOverride ? ' — couleur individuelle' : ''}`;
-        seg.style.cssText = `width:20px; height:${cellSize}px; background:${effectiveColor}; flex-shrink:0; position:relative; cursor:pointer;${hasOverride ? ' outline:2px solid #fff; outline-offset:-2px;' : ''}`;
+      const lbl = document.createElement('span');
+      lbl.style.cssText = 'position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:9px; font-weight:700; color:#fff; text-shadow:0 0 2px rgba(0,0,0,0.6); pointer-events:none; z-index:1;';
+      lbl.textContent = bloc.name;
+      seg.appendChild(lbl);
 
-        // Petite lettre du bloc sur la première duite de chaque occurrence
-        if (d === 0) {
-          const lbl = document.createElement('span');
-          lbl.style.cssText = 'position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:700; color:#fff; text-shadow:0 0 2px rgba(0,0,0,0.7); pointer-events:none; z-index:1;';
-          lbl.textContent = t;
-          seg.appendChild(lbl);
-        }
+      const idx = i;
+      seg.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Fermer tout popover existant
+        document.querySelectorAll('._trame-popover').forEach(p => p.remove());
 
-        const capturedRow = rowIdx;
-        const capturedOccIdx = i;
-        const capturedBaseColor = baseColor;
+        const pop = document.createElement('div');
+        pop.className = '_trame-popover';
+        pop.style.cssText = 'position:fixed; z-index:9999; background:#fff; border:1px solid #ccc; border-radius:6px; padding:8px; box-shadow:0 4px 16px rgba(0,0,0,0.18); display:flex; flex-direction:column; gap:6px; min-width:160px;';
 
-        seg.addEventListener('click', (e) => {
-          e.stopPropagation();
-          // Fermer tout popover existant
-          document.querySelectorAll('._trame-popover').forEach(p => p.remove());
+        // Titre
+        const title = document.createElement('div');
+        title.style.cssText = 'font-size:0.75rem; font-weight:600; color:#555; margin-bottom:2px;';
+        title.textContent = `Couleur — Bloc ${t} (occ. ${i + 1})`;
+        pop.appendChild(title);
 
-          const currentColor = BlocsTrame.rowOverrideColors[capturedRow] !== undefined
-            ? BlocsTrame.rowOverrideColors[capturedRow]
-            : capturedBaseColor;
+        // Palette des couleurs déjà utilisées
+        if (usedColors.length > 0) {
+          const palLbl = document.createElement('div');
+          palLbl.style.cssText = 'font-size:0.7rem; color:#888;';
+          palLbl.textContent = 'Couleurs existantes :';
+          pop.appendChild(palLbl);
 
-          const pop = document.createElement('div');
-          pop.className = '_trame-popover';
-          pop.style.cssText = 'position:fixed; z-index:9999; background:#fff; border:1px solid #ccc; border-radius:6px; padding:8px; box-shadow:0 4px 16px rgba(0,0,0,0.18); display:flex; flex-direction:column; gap:6px; min-width:180px;';
-
-          // Titre
-          const title = document.createElement('div');
-          title.style.cssText = 'font-size:0.75rem; font-weight:600; color:#555; margin-bottom:2px;';
-          title.textContent = `Duite ${capturedRow + 1} — Bloc ${t} (occ. ${capturedOccIdx + 1})`;
-          pop.appendChild(title);
-
-          // Palette des couleurs déjà utilisées
-          if (usedColors.length > 0) {
-            const palLbl = document.createElement('div');
-            palLbl.style.cssText = 'font-size:0.7rem; color:#888;';
-            palLbl.textContent = 'Couleurs existantes :';
-            pop.appendChild(palLbl);
-
-            const pal = document.createElement('div');
-            pal.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px;';
-            usedColors.forEach(c => {
-              const swatch = document.createElement('div');
-              swatch.style.cssText = `width:22px; height:22px; background:${c}; border-radius:3px; cursor:pointer; border:2px solid ${c === currentColor ? '#333' : 'transparent'}; box-sizing:border-box;`;
-              swatch.title = c;
-              swatch.addEventListener('click', (ev) => {
-                ev.stopPropagation();
-                BlocsTrame.setRowColor(capturedRow, c);
-                pop.remove();
-              });
-              pal.appendChild(swatch);
-            });
-            pop.appendChild(pal);
-          }
-
-          // Bouton picker natif
-          const pickerRow2 = document.createElement('div');
-          pickerRow2.style.cssText = 'display:flex; align-items:center; gap:6px; margin-top:2px;';
-          const pickerLbl = document.createElement('label');
-          pickerLbl.style.cssText = 'font-size:0.75rem; color:#555; cursor:pointer; display:flex; align-items:center; gap:4px;';
-          pickerLbl.textContent = 'Autre couleur…';
-          const pickerInp = document.createElement('input');
-          pickerInp.type = 'color';
-          pickerInp.value = currentColor;
-          pickerInp.style.cssText = 'width:28px; height:24px; padding:0; border:none; cursor:pointer; border-radius:3px;';
-          pickerInp.addEventListener('input', () => { BlocsTrame.setRowColor(capturedRow, pickerInp.value); });
-          pickerInp.addEventListener('change', () => { pop.remove(); });
-          pickerLbl.appendChild(pickerInp);
-          pickerRow2.appendChild(pickerLbl);
-          pop.appendChild(pickerRow2);
-
-          // Bouton réinitialiser (supprimer la surcharge)
-          if (BlocsTrame.rowOverrideColors[capturedRow] !== undefined) {
-            const resetBtn = document.createElement('button');
-            resetBtn.type = 'button';
-            resetBtn.textContent = 'Réinitialiser (couleur du bloc)';
-            resetBtn.style.cssText = 'font-size:0.7rem; padding:3px 6px; border:1px solid #ccc; border-radius:3px; background:#f5f5f5; cursor:pointer; color:#555;';
-            resetBtn.addEventListener('click', () => {
-              BlocsTrame.setRowColor(capturedRow, null);
+          const pal = document.createElement('div');
+          pal.style.cssText = 'display:flex; flex-wrap:wrap; gap:4px;';
+          usedColors.forEach(c => {
+            const swatch = document.createElement('div');
+            swatch.style.cssText = `width:22px; height:22px; background:${c}; border-radius:3px; cursor:pointer; border:2px solid ${c === color ? '#333' : 'transparent'}; box-sizing:border-box;`;
+            swatch.title = c;
+            swatch.addEventListener('click', (ev) => {
+              ev.stopPropagation();
+              seg.style.background = c;
+              BlocsTrame.setOccurrenceColor(idx, c);
               pop.remove();
             });
-            pop.appendChild(resetBtn);
-          }
+            pal.appendChild(swatch);
+          });
+          pop.appendChild(pal);
+        }
 
-          // Positionner le popover
-          document.body.appendChild(pop);
-          const rect = seg.getBoundingClientRect();
-          let left = rect.right + 4;
-          let top  = rect.top;
-          if (left + pop.offsetWidth > window.innerWidth - 8) left = rect.left - pop.offsetWidth - 4;
-          if (top + pop.offsetHeight > window.innerHeight - 8) top = window.innerHeight - pop.offsetHeight - 8;
-          pop.style.left = left + 'px';
-          pop.style.top  = top  + 'px';
-
-          // Fermer si clic en dehors
-          setTimeout(() => {
-            const closeHandler = (ev) => {
-              if (!pop.contains(ev.target)) {
-                pop.remove();
-                document.removeEventListener('mousedown', closeHandler);
-              }
-            };
-            document.addEventListener('mousedown', closeHandler);
-          }, 100);
+        // Bouton picker natif
+        const pickerRow = document.createElement('div');
+        pickerRow.style.cssText = 'display:flex; align-items:center; gap:6px; margin-top:2px;';
+        const pickerLbl = document.createElement('label');
+        pickerLbl.style.cssText = 'font-size:0.75rem; color:#555; cursor:pointer; display:flex; align-items:center; gap:4px;';
+        pickerLbl.textContent = 'Autre couleur…';
+        const pickerInp = document.createElement('input');
+        pickerInp.type = 'color';
+        pickerInp.value = color;
+        pickerInp.style.cssText = 'width:28px; height:24px; padding:0; border:none; cursor:pointer; border-radius:3px;';
+        pickerInp.addEventListener('input', () => {
+          seg.style.background = pickerInp.value;
+          BlocsTrame.setOccurrenceColor(idx, pickerInp.value);
         });
+        pickerInp.addEventListener('change', () => { pop.remove(); });
+        pickerLbl.appendChild(pickerInp);
+        pickerRow.appendChild(pickerLbl);
+        pop.appendChild(pickerRow);
 
-        band.appendChild(seg);
-      }
-      globalRow += bSize;
+        // Positionner le popover à droite du segment
+        document.body.appendChild(pop);
+        const rect = seg.getBoundingClientRect();
+        let left = rect.right + 4;
+        let top  = rect.top;
+        if (left + pop.offsetWidth > window.innerWidth - 8) left = rect.left - pop.offsetWidth - 4;
+        if (top + pop.offsetHeight > window.innerHeight - 8) top = window.innerHeight - pop.offsetHeight - 8;
+        pop.style.left = left + 'px';
+        pop.style.top  = top  + 'px';
+
+        // Fermer si clic en dehors du popover
+        setTimeout(() => {
+          const closeHandler = (ev) => {
+            if (!pop.contains(ev.target)) {
+              pop.remove();
+              document.removeEventListener('mousedown', closeHandler);
+            }
+          };
+          document.addEventListener('mousedown', closeHandler);
+        }, 100);
+      });
+
+      band.appendChild(seg);
     });
   },
 
